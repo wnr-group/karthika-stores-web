@@ -1,0 +1,38 @@
+{
+  "name": "karthika",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Karthika \u2014 a saree atelier. Editorial e-commerce built with Next.js, Supabase and Firebase Auth.",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "db:seed": "tsx scripts/generate-seed.ts"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.58.0",
+    "clsx": "^2.1.1",
+    "firebase": "^12.3.0",
+    "firebase-admin": "^13.5.0",
+    "motion": "^12.23.12",
+    "next": "^15.5.25",
+    "react": "19.1.1",
+    "react-dom": "19.1.1",
+    "server-only": "^0.0.1",
+    "tailwind-merge": "^3.3.1",
+    "zod": "^4.1.11"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.1.13",
+    "@types/node": "^24.5.2",
+    "@types/react": "^19.1.13",
+    "@types/react-dom": "^19.1.9",
+    "eslint": "^9.36.0",
+    "eslint-config-next": "^15.5.25",
+    "tailwindcss": "^4.1.13",
+    "tsx": "^4.23.13",
+    "typescript": "^5.9.2"
+  }
+}
