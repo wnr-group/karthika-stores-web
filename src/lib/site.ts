@@ -10,7 +10,11 @@ export const site = {
   tagline: "A saree atelier",
   description:
     "Handwoven sarees from Kanchipuram, Banaras and the looms of the south, made for the way women dress now.",
-  url: process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
+  // `||` rather than `??`: an env var present but set to an empty string
+  // (which is what Vercel creates if you import names from .env.example
+  // without filling in values) must fall back too, or `new URL(site.url)`
+  // in the root layout throws at build time.
+  url: process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000",
   locale: "en_IN",
   currency: "INR",
 
