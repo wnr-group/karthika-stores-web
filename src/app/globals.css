@@ -1,24 +1,37 @@
 @import "tailwindcss";
 
 @theme {
-  --color-ivory: #f4efe6;
-  --color-paper: #faf7f1;
-  --color-shell: #ece4d7;
-  --color-sand: #e2d8c7;
-  --color-stone: #ddd2be;
-  --color-stone-soft: #e8e0d2;
-  --color-ink: #1f1c19;
-  --color-graphite: #3a3430;
-  --color-taupe: #857a6d;
-  --color-taupe-soft: #a2988c;
-  --color-terracotta: #b0532c;
-  --color-terracotta-deep: #8d411f;
+  /* Ground: clean white with pale green panels; sandal is kept for accents only. */
+  --color-ivory: #fcfdfb;
+  --color-paper: #ffffff;
+  --color-shell: #edf3ef;
+  --color-sand: #d5e3da;
+  --color-stone: #e1e8e3;
+  --color-stone-soft: #eef2ef;
+  /* Ink: a deep bottle green carries headings, buttons and dark bands. */
+  --color-ink: #10362f;
+  --color-graphite: #34514a;
+  --color-taupe: #63706a;
+  --color-taupe-soft: #9ca6a1;
+  /* Accent: sandalwood bronze for brand moments, gold for ratings. */
+  --color-brand: #b07d48;
+  --color-brand-deep: #8c5f33;
+  --color-brand-soft: #edf3ef;
+  --color-gold: #c19a5b;
+  --color-terracotta: #a35a35;
+  --color-terracotta-deep: #7d4226;
   --color-maroon: #63202a;
   --color-olive: #57604a;
-  --color-success: #4a6b4f;
+  --color-success: #2f6b52;
   --color-danger: #9b3226;
+  /* Named greens and sandals for the editorial bands. */
+  --color-forest: #10362f;
+  --color-forest-deep: #0b2a24;
+  --color-forest-soft: #1d4a41;
+  --color-sandal: #e9d6b8;
+  --color-sandal-deep: #b07d48;
 
-  --font-sans: var(--font-inter), Inter, "Helvetica Neue", Arial, sans-serif;
+  --font-sans: var(--font-jost), Jost, "Helvetica Neue", Arial, sans-serif;
   --font-display: var(--font-cormorant), "Cormorant Garamond", "Iowan Old Style", Georgia, serif;
 
   --ease-drape: cubic-bezier(0.22, 0.61, 0.36, 1);
@@ -52,7 +65,7 @@
   h1, h2, h3, h4 {
     color: var(--color-ink);
     font-family: var(--font-display);
-    font-weight: 300;
+    font-weight: 500;
     letter-spacing: -0.01em;
     line-height: 1.06;
     text-wrap: balance;
@@ -130,27 +143,27 @@
 
   .display-xl {
     font-family: var(--font-display);
-    font-weight: 300;
+    font-weight: 500;
     font-size: clamp(2.75rem, 7.5vw, 6.25rem);
     line-height: 0.94;
     letter-spacing: -0.02em;
   }
   .display-lg {
     font-family: var(--font-display);
-    font-weight: 300;
+    font-weight: 500;
     font-size: clamp(2.25rem, 5vw, 4rem);
     line-height: 1.02;
     letter-spacing: -0.015em;
   }
   .display-md {
     font-family: var(--font-display);
-    font-weight: 300;
+    font-weight: 500;
     font-size: clamp(1.75rem, 3.2vw, 2.75rem);
     line-height: 1.08;
   }
   .display-sm {
     font-family: var(--font-display);
-    font-weight: 300;
+    font-weight: 500;
     font-size: clamp(1.375rem, 2.2vw, 1.875rem);
     line-height: 1.15;
   }
@@ -217,4 +230,11 @@
     color: var(--color-taupe);
     margin-bottom: 0.25rem;
   }
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }

@@ -1,154 +1,215 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 
+import { ArrivalRail } from "@/components/home/arrival-rail";
 import { ProductCard } from "@/components/product/product-card";
-import { Media, ratio } from "@/components/ui/media";
-import { LoomIcon, ReturnIcon, ShieldIcon, TruckIcon } from "@/components/ui/icons";
-import { Reveal } from "@/components/ui/reveal";
-import { SectionHeader } from "@/components/ui/primitives";
-import type { Category, Collection, ProductWithRelations } from "@/lib/types";
-import { cn } from "@/lib/utils";
+import { ArrowRightIcon } from "@/components/ui/icons";
+import { Media } from "@/components/ui/media";
+import type { Category, ProductImage, ProductWithRelations } from "@/lib/types";
+import { site, valueAddedServices } from "@/lib/site";
+import { cn, formatPrice } from "@/lib/utils";
 
 /* =========================================================================
-   1. Statement
-   A text-only band. No image, no button. It exists to slow the page down
-   after the hero and to say what the shop is for.
+   Shared bits
    ========================================================================= */
 
-export function Statement() {
-  return (
-    <section className="shell py-20 md:py-28">
-      <div className="grid gap-10 md:grid-cols-12">
-        <div className="md:col-span-3">
-          <p className="eyebrow">Since 2016</p>
-          <p className="mt-4 text-[0.8125rem] leading-relaxed text-taupe">
-            Six weaving families. One shop on Kasturi Ranga Road. No middlemen between the loom
-            and the label.
-          </p>
-        </div>
-
-        <div className="md:col-span-8 md:col-start-5">
-          <Reveal>
-            <p className="font-display text-[1.75rem] font-light leading-[1.28] text-ink md:text-[2.5rem] lg:text-[2.9rem]">
-              The soft sheen of silk. The weight of a handwoven border. A saree that becomes part
-              of your story, and then part of someone else&rsquo;s.
-            </p>
-          </Reveal>
-
-          <Reveal delay={90}>
-            <p className="measure mt-8 text-[0.9375rem] leading-relaxed text-graphite">
-              We started because the sarees we wanted did not exist at a price we could defend.
-              Everything here is bought directly from the people who wove it, and every piece
-              carries their name.
-            </p>
-            <Link
-              href="/about"
-              className="link-rule mt-6 inline-block text-[0.6875rem] uppercase tracking-[0.16em]"
-            >
-              Read our story
-            </Link>
-          </Reveal>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/* =========================================================================
-   2. Featured collection
-   Asymmetric: one tall piece on the left, two stacked on the right, with the
-   heading pinned into the right column rather than centred above.
-   ========================================================================= */
-
-export function FeaturedCollection({
-  collection,
-  products,
+/** Eyebrow, title and an optional "view all" link on the right. */
+function Header({
+  eyebrow,
+  title,
+  intro,
+  action,
+  tone = "light",
 }: {
-  collection: Collection;
-  products: ProductWithRelations[];
+  eyebrow: string;
+  title: ReactNode;
+  intro?: ReactNode;
+  action?: { label: string; href: string };
+  tone?: "light" | "dark";
 }) {
-  const [lead, ...rest] = products;
-  if (!lead) return null;
-
+  const dark = tone === "dark";
   return (
-    <section className="shell pb-20 md:pb-28">
-      <div className="grid gap-x-8 gap-y-12 lg:grid-cols-12">
-        {/* Lead piece */}
-        <Reveal className="lg:col-span-6 xl:col-span-7">
-          <ProductCard
-            product={lead}
-            featured
-            sizes="(min-width: 1024px) 55vw, 100vw"
-          />
-        </Reveal>
-
-        {/* Heading and the two smaller pieces */}
-        <div className="lg:col-span-5 lg:col-start-8 lg:flex lg:flex-col lg:justify-between">
-          <Reveal delay={60}>
-            <p className="eyebrow">{collection.name}</p>
-            <h2 className="display-lg mt-5">Woven this season</h2>
-            <p className="measure mt-5 text-[0.9375rem] leading-relaxed text-graphite">
-              {collection.story}
-            </p>
-            <Link
-              href={`/collections/${collection.slug}`}
-              className="link-rule mt-6 inline-block text-[0.6875rem] uppercase tracking-[0.16em]"
-            >
-              See the collection
-            </Link>
-          </Reveal>
-
-          <div className="mt-12 grid grid-cols-2 gap-x-5 gap-y-10 lg:mt-16">
-            {rest.slice(0, 2).map((product, index) => (
-              <Reveal key={product.id} delay={120 + index * 60}>
-                <ProductCard product={product} sizes="(min-width: 1024px) 22vw, 45vw" />
-              </Reveal>
-            ))}
-          </div>
-        </div>
+    <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
+      <div className="max-w-2xl">
+        <p
+          className={cn(
+            "flex items-center gap-2 text-[0.6875rem] font-medium uppercase tracking-[0.2em]",
+            dark ? "text-sandal" : "text-forest-soft",
+          )}
+        >
+          <span aria-hidden className={cn("h-1.5 w-1.5 rounded-full", dark ? "bg-sandal" : "bg-brand")} />
+          {eyebrow}
+        </p>
+        <h2
+          className={cn(
+            "mt-3 font-display text-[2rem] font-medium leading-[1.08] md:text-[2.5rem]",
+            dark ? "text-paper" : "text-ink",
+          )}
+        >
+          {title}
+        </h2>
+        {intro ? (
+          <p className={cn("mt-3 text-[0.9375rem] leading-relaxed", dark ? "text-paper/70" : "text-graphite")}>
+            {intro}
+          </p>
+        ) : null}
       </div>
+      {action ? (
+        <Link
+          href={action.href}
+          className={cn(
+            "group inline-flex shrink-0 items-center gap-2 text-[0.875rem] font-medium",
+            dark ? "text-paper hover:text-sandal" : "text-ink hover:text-forest-soft",
+          )}
+        >
+          {action.label}
+          <ArrowRightIcon className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+        </Link>
+      ) : null}
+    </div>
+  );
+}
+
+function ProductRow({ products }: { products: ProductWithRelations[] }) {
+  return (
+    <div className="mt-8 grid grid-cols-2 gap-x-4 gap-y-10 md:grid-cols-4 md:gap-x-6">
+      {products.slice(0, 4).map((product) => (
+        <ProductCard key={product.id} product={product} sizes="(min-width: 768px) 23vw, 45vw" />
+      ))}
+    </div>
+  );
+}
+
+/* =========================================================================
+   1. Shop by category
+   ========================================================================= */
+
+export interface CategoryTile {
+  name: string;
+  href: string;
+  image: ProductImage;
+}
+
+export function CategoryTiles({ tiles }: { tiles: CategoryTile[] }) {
+  return (
+    <section className="shell py-12 md:py-16">
+      <Header eyebrow="Shop by category" title="Find your piece" action={{ label: "View everything", href: "/shop" }} />
+
+      <ul className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 md:gap-4 lg:grid-cols-6">
+        {tiles.map((tile) => (
+          <li key={tile.href}>
+            <Link href={tile.href} className="group block">
+              <div className="relative aspect-[4/5] overflow-hidden rounded-2xl bg-shell">
+                <Media
+                  image={tile.image}
+                  sizes="(min-width: 1024px) 16vw, (min-width: 640px) 31vw, 47vw"
+                  className="absolute inset-0 transition-transform duration-[600ms] group-hover:scale-[1.05]"
+                />
+              </div>
+              <p className="mt-3 flex items-center justify-between text-[0.9375rem] font-medium text-ink">
+                {tile.name}
+                <ArrowRightIcon className="h-4 w-4 text-taupe transition-all group-hover:translate-x-0.5 group-hover:text-ink" />
+              </p>
+            </Link>
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }
 
 /* =========================================================================
-   3. Categories
-   A horizontal rail of tall images. Photography instead of icons, and it
-   scrolls rather than wrapping, so the row reads as a shelf.
+   2. Imitation jewellery
    ========================================================================= */
 
-export function CategoryRail({ categories }: { categories: Category[] }) {
-  return (
-    <section className="py-20 md:py-28">
-      <div className="shell">
-        <SectionHeader
-          eyebrow="Shop by weave"
-          title="Nine ways to wear a saree"
-          action={{ label: "All sarees", href: "/shop" }}
-        />
-      </div>
+/** Style shortcuts to try; the page only shows the ones that return pieces. */
+export const JEWELLERY_STYLES = ["Kundan", "Temple", "Polki", "Jhumka", "Choker", "Oxidised", "Bangles", "Earrings", "Necklace", "Ring"];
 
-      <div className="no-scrollbar mt-12 flex gap-4 overflow-x-auto px-5 pb-2 md:gap-6 md:px-10 xl:px-16">
-        {categories.map((category) => (
-          <Link
-            key={category.id}
-            href={`/shop/${category.slug}`}
-            className="group w-[62vw] shrink-0 sm:w-[38vw] md:w-[30vw] lg:w-[21vw] xl:w-[17vw]"
-          >
-            <div className={cn("relative overflow-hidden bg-shell", ratio.portrait)}>
-              <Media
-                image={category.image}
-                sizes="(min-width: 1280px) 17vw, (min-width: 768px) 30vw, 62vw"
-                className="absolute inset-0 transition-transform duration-[600ms] ease-[cubic-bezier(0.22,0.61,0.36,1)] group-hover:scale-[1.04]"
-              />
-            </div>
-            <h3 className="mt-4 font-display text-[1.25rem] leading-snug text-ink">
-              {category.name}
-            </h3>
-            <p className="mt-1 text-[0.75rem] leading-relaxed text-taupe">
-              {category.description}
-            </p>
-          </Link>
-        ))}
+export function JewelleryBox({ products, styles }: { products: ProductWithRelations[]; styles: string[] }) {
+  if (products.length === 0) return null;
+
+  return (
+    <section className="shell pb-12 md:pb-16">
+      <Header
+        eyebrow="Imitation jewellery"
+        title="Fine looks, everyday prices"
+        intro="Kundan, polki and temple styles, plated to last and finished by hand."
+        action={{ label: "Shop all jewellery", href: "/shop/imitation-jewellery" }}
+      />
+
+      {styles.length > 0 ? (
+        <ul className="mt-6 flex flex-wrap gap-2">
+          {styles.map((style) => (
+            <li key={style}>
+              <Link
+                href={`/shop/imitation-jewellery?q=${encodeURIComponent(style)}`}
+                className="inline-block rounded-full border border-stone bg-paper px-4 py-2 text-[0.8125rem] text-ink transition-colors hover:border-ink hover:bg-ink hover:text-paper"
+              >
+                {style}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+
+      <ProductRow products={products} />
+    </section>
+  );
+}
+
+/* =========================================================================
+   3. Promo pair
+   ========================================================================= */
+
+export interface Promo {
+  eyebrow: string;
+  title: string;
+  body: string;
+  cta: string;
+  href: string;
+  image: ProductImage;
+}
+
+export function PromoPair({ promos }: { promos: [Promo, Promo] }) {
+  return (
+    <section className="shell pb-12 md:pb-16">
+      <div className="grid gap-4 md:grid-cols-2">
+        {promos.map((promo, index) => {
+          const dark = index === 0;
+          return (
+            <Link
+              key={promo.href}
+              href={promo.href}
+              className={cn(
+                "group grid min-h-[15rem] grid-cols-5 overflow-hidden rounded-[1.5rem]",
+                dark ? "bg-forest" : "bg-shell",
+              )}
+            >
+              <div className="col-span-3 flex flex-col justify-center p-6 md:p-8">
+                <p className={cn("text-[0.6875rem] font-medium uppercase tracking-[0.2em]", dark ? "text-sandal" : "text-forest-soft")}>
+                  {promo.eyebrow}
+                </p>
+                <h3 className={cn("mt-3 font-display text-[1.625rem] font-medium leading-tight md:text-[1.875rem]", dark ? "text-paper" : "text-ink")}>
+                  {promo.title}
+                </h3>
+                <p className={cn("mt-2 text-[0.875rem] leading-relaxed", dark ? "text-paper/70" : "text-graphite")}>
+                  {promo.body}
+                </p>
+                <span className={cn("mt-5 inline-flex items-center gap-2 text-[0.875rem] font-medium", dark ? "text-paper" : "text-ink")}>
+                  {promo.cta}
+                  <ArrowRightIcon className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                </span>
+              </div>
+              <div className="relative col-span-2">
+                <Media
+                  image={promo.image}
+                  sizes="(min-width: 768px) 20vw, 40vw"
+                  className="absolute inset-0 transition-transform duration-[600ms] group-hover:scale-[1.04]"
+                />
+              </div>
+            </Link>
+          );
+        })}
       </div>
     </section>
   );
@@ -156,236 +217,171 @@ export function CategoryRail({ categories }: { categories: Category[] }) {
 
 /* =========================================================================
    4. New arrivals
-   The one conventional grid on the page, and it earns it: this is where
-   people who came back to shop actually want to land.
    ========================================================================= */
 
-export function NewArrivals({ products }: { products: ProductWithRelations[] }) {
+export function NewArrivalsBand({ products }: { products: ProductWithRelations[] }) {
+  if (products.length === 0) return null;
+
   return (
-    <section className="shell pb-20 md:pb-28">
-      <SectionHeader
-        eyebrow="Just arrived"
-        title="New this month"
-        action={{ label: "See everything new", href: "/shop?sort=newest" }}
+    <section className="bg-forest py-14 md:py-16">
+      <div className="shell">
+        <Header
+          tone="dark"
+          eyebrow="Just in"
+          title="New arrivals"
+          action={{ label: "See everything new", href: "/shop?sort=newest" }}
+        />
+        <ArrivalRail products={products} />
+      </div>
+    </section>
+  );
+}
+
+/* =========================================================================
+   5. Textiles
+   ========================================================================= */
+
+export function TextileEdit({ weaves, products }: { weaves: Category[]; products: ProductWithRelations[] }) {
+  if (products.length === 0) return null;
+
+  return (
+    <section className="shell py-12 md:py-16">
+      <Header
+        eyebrow="Textiles"
+        title="Sarees, kurtis & dresses"
+        intro="Silks for the big days, cottons and linens for every other one. Bought straight from the looms."
+        action={{ label: "Shop textiles", href: "/shop/fashion" }}
       />
 
-      <div className="mt-12 grid grid-cols-2 gap-x-4 gap-y-12 md:grid-cols-4 md:gap-x-6 lg:gap-x-8">
-        {products.slice(0, 4).map((product, index) => (
-          <Reveal key={product.id} delay={index * 60}>
-            <ProductCard
-              product={product}
-              sizes="(min-width: 768px) 23vw, 45vw"
-            />
-          </Reveal>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-/* =========================================================================
-   5. Silk stories
-   Image-heavy, warm, and off-centre: the text block overlaps the image on
-   desktop rather than sitting politely beside it.
-   ========================================================================= */
-
-export function SilkStories({
-  collection,
-  products,
-}: {
-  collection: Collection;
-  products: ProductWithRelations[];
-}) {
-  return (
-    <section className="relative overflow-hidden bg-shell/70 py-20 md:py-28">
-      <div className="shell">
-        <div className="grid items-center gap-10 lg:grid-cols-12">
-          <Reveal className="lg:col-span-7">
-            <div className={cn("relative overflow-hidden", ratio.landscape)}>
-              <Media
-                image={collection.image}
-                sizes="(min-width: 1024px) 58vw, 100vw"
-                className="absolute inset-0"
-              />
-            </div>
-          </Reveal>
-
-          <Reveal
-            delay={80}
-            className="lg:col-span-6 lg:col-start-7 lg:-ml-16 lg:bg-paper lg:p-12 xl:-ml-24 xl:p-14"
-          >
-            <p className="eyebrow">Silk stories</p>
-            <h2 className="display-lg mt-5">
-              From the looms
-              <br />
-              of Kanchipuram
-            </h2>
-            <p className="mt-6 text-[0.9375rem] leading-relaxed text-graphite">
-              {collection.story}
-            </p>
-            <Link
-              href={`/collections/${collection.slug}`}
-              className="link-rule mt-7 inline-block text-[0.6875rem] uppercase tracking-[0.16em]"
-            >
-              Explore silk sarees
-            </Link>
-          </Reveal>
-        </div>
-
-        {/* Three silks, sitting under the story rather than in their own band. */}
-        <div className="mt-16 grid grid-cols-2 gap-x-4 gap-y-12 md:grid-cols-3 md:gap-x-8">
-          {products.slice(0, 3).map((product, index) => (
-            <Reveal key={product.id} delay={index * 60}>
-              <ProductCard product={product} sizes="(min-width: 768px) 30vw, 45vw" />
-            </Reveal>
+      {weaves.length > 0 ? (
+        <ul className="mt-6 flex flex-wrap gap-2">
+          {weaves.map((weave) => (
+            <li key={weave.id}>
+              <Link
+                href={`/shop/${weave.slug}`}
+                className="inline-block rounded-full bg-shell px-4 py-2 text-[0.8125rem] text-ink transition-colors hover:bg-ink hover:text-paper"
+              >
+                {weave.name}
+              </Link>
+            </li>
           ))}
-        </div>
+        </ul>
+      ) : null}
+
+      <ProductRow products={products} />
+    </section>
+  );
+}
+
+/* =========================================================================
+   6. Value-added services
+   ========================================================================= */
+
+export function ValueServices() {
+  return (
+    <section id="services" className="scroll-mt-24 bg-shell py-14 md:py-16">
+      <div className="shell">
+        <Header
+          eyebrow="Value-added services"
+          title="We finish it for you"
+          intro="Stitched, pleated, polished and wrapped by our own team. Book any of these on WhatsApp."
+        />
+
+        <ul className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {valueAddedServices.map((service, index) => (
+            <li key={service.title} className="flex flex-col rounded-2xl bg-paper p-6">
+              <div className="flex items-center gap-4">
+                <span className="tnum flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-forest text-[0.8125rem] font-medium text-paper">
+                  {String(index + 1).padStart(2, "0")}
+                </span>
+                <h3 className="font-sans text-[1rem] font-medium text-ink">{service.title}</h3>
+              </div>
+              <p className="mt-4 flex-1 text-[0.875rem] leading-relaxed text-graphite">{service.body}</p>
+              <div className="mt-5 flex items-center justify-between gap-4 border-t border-stone pt-4">
+                <p className="text-[0.8125rem] text-taupe">
+                  From <span className="tnum font-medium text-ink">{formatPrice(service.fromPrice)}</span>
+                </p>
+                <a
+                  href={`https://wa.me/${site.contact.whatsapp}?text=${encodeURIComponent(service.enquiry)}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex h-9 items-center gap-2 rounded-full bg-forest px-4 text-[0.8125rem] font-medium text-paper transition-colors hover:bg-forest-soft"
+                >
+                  Enquire
+                  <ArrowRightIcon className="h-3.5 w-3.5" />
+                </a>
+              </div>
+            </li>
+          ))}
+        </ul>
       </div>
     </section>
   );
 }
 
 /* =========================================================================
-   6. Festive band
-   The one dark section on the page. Deep maroon ground, image bleeding off
-   the left edge, text right.
+   7. Reviews
    ========================================================================= */
 
-export function FestiveBand({ collection }: { collection: Collection }) {
-  return (
-    <section className="bg-maroon text-[#f0e4dc]">
-      <div className="grid lg:grid-cols-12">
-        <div className="relative aspect-[4/3] lg:col-span-6 lg:aspect-auto lg:min-h-[34rem]">
-          <Media
-            image={collection.image}
-            sizes="(min-width: 1024px) 50vw, 100vw"
-            className="absolute inset-0 h-full w-full"
-          />
-        </div>
-
-        <div className="flex items-center lg:col-span-6">
-          <div className="px-5 py-16 md:px-14 lg:py-20 xl:px-20">
-            <p className="text-[0.625rem] uppercase tracking-[0.22em] text-[#d8b39c]">
-              The festive edit
-            </p>
-
-            <h2 className="mt-5 font-display text-[2.25rem] font-light leading-[1.05] text-[#f7ece4] md:text-[3.25rem]">
-              Deep colour,
-              <br />
-              restrained gold
-            </h2>
-
-            <p className="measure mt-6 text-[0.9375rem] leading-relaxed text-[#e4cfc2]">
-              {collection.story}
-            </p>
-
-            <Link
-              href={`/collections/${collection.slug}`}
-              className="mt-9 inline-block border border-[#c9a289] px-8 py-3.5 text-[0.6875rem] uppercase tracking-[0.16em] text-[#f7ece4] transition-colors duration-[240ms] hover:bg-[#f7ece4] hover:text-maroon"
-            >
-              Shop the edit
-            </Link>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
+export interface ReviewCard {
+  id: string;
+  body: string;
+  author: string;
+  detail: string;
+  rating: number;
 }
 
-/* =========================================================================
-   7. Atelier note
-   A short signed note. Text-heavy, narrow measure, one small portrait.
-   ========================================================================= */
+export function Reviews({ reviews }: { reviews: ReviewCard[] }) {
+  if (reviews.length === 0) return null;
 
-export function AtelierNote() {
   return (
-    <section className="shell py-20 md:py-28">
-      <div className="grid gap-12 md:grid-cols-12 md:items-start">
-        <Reveal className="md:col-span-3">
-          <div className={cn("relative overflow-hidden", ratio.portrait)}>
-            <Media
-              image={{
-                id: "atelier-portrait",
-                url: null,
-                alt: "Lakshmi Narayanan at the Karthika atelier in Alwarpet",
-                kind: "lifestyle",
-                tone: "sand",
-                displayOrder: 0,
-              }}
-              sizes="(min-width: 768px) 22vw, 100vw"
-              className="absolute inset-0"
-            />
-          </div>
-        </Reveal>
-
-        <Reveal delay={80} className="md:col-span-7 md:col-start-6">
-          <p className="eyebrow">From the atelier</p>
-
-          <p className="mt-6 font-display text-[1.5rem] font-light leading-[1.35] text-ink md:text-[1.875rem]">
-            &ldquo;My grandmother had eleven sarees and could tell you where each one came from.
-            I would rather sell one saree a woman keeps for thirty years than thirty she
-            forgets.&rdquo;
-          </p>
-
-          <p className="mt-8 text-[0.9375rem] leading-relaxed text-graphite">
-            We visit the looms four times a year. We pay before the saree is finished, not after
-            it sells, because a weaver should not be the one carrying the risk. It makes our
-            range smaller than it could be. We have made our peace with that.
-          </p>
-
-          <div className="mt-8 flex items-center gap-4">
-            <span className="h-px w-10 bg-stone" />
-            <p className="text-[0.75rem] text-taupe">
-              Lakshmi Narayanan, founder
+    <section className="shell py-12 md:py-16">
+      <Header eyebrow="Reviews" title="What customers say" />
+      <ul className="mt-8 grid gap-4 md:grid-cols-3">
+        {reviews.slice(0, 3).map((review) => (
+          <li key={review.id} className="flex flex-col rounded-2xl border border-stone bg-paper p-6">
+            <p aria-label={`${review.rating} out of 5`} className="text-[0.875rem] tracking-[0.15em] text-gold">
+              {"★".repeat(review.rating)}
+              <span className="text-stone">{"★".repeat(5 - review.rating)}</span>
             </p>
-          </div>
-        </Reveal>
-      </div>
-    </section>
-  );
-}
-
-/* =========================================================================
-   8. Assurances
-   A hairline row, not a card row. Four short facts, no shadows, no boxes.
-   ========================================================================= */
-
-const ASSURANCES = [
-  {
-    icon: TruckIcon,
-    title: "Complimentary shipping",
-    body: "On orders above Rs 5,000, anywhere in India. Dispatched within two working days.",
-  },
-  {
-    icon: ReturnIcon,
-    title: "Seven-day returns",
-    body: "Unworn, with the tag on. We arrange the pickup and pay for it.",
-  },
-  {
-    icon: LoomIcon,
-    title: "Named weavers",
-    body: "Every piece ships with a note saying who wove it and how long it took.",
-  },
-  {
-    icon: ShieldIcon,
-    title: "Secure payment",
-    body: "UPI, cards, netbanking and cash on delivery. Nothing is stored on our servers.",
-  },
-];
-
-export function Assurances() {
-  return (
-    <section className="shell pb-20 md:pb-28">
-      <div className="grid gap-x-8 gap-y-10 border-t border-stone pt-12 sm:grid-cols-2 lg:grid-cols-4">
-        {ASSURANCES.map(({ icon: Icon, title, body }) => (
-          <div key={title}>
-            <Icon className="h-5 w-5 text-taupe" />
-            <h3 className="mt-4 text-[0.6875rem] uppercase tracking-[0.18em] text-ink">
-              {title}
-            </h3>
-            <p className="mt-2 text-[0.8125rem] leading-relaxed text-taupe">{body}</p>
-          </div>
+            <blockquote className="mt-4 flex-1 text-[0.9375rem] leading-relaxed text-ink">{review.body}</blockquote>
+            <footer className="mt-5 border-t border-stone pt-4">
+              <p className="text-[0.875rem] font-medium text-ink">{review.author}</p>
+              <p className="mt-0.5 text-[0.75rem] text-taupe">{review.detail}</p>
+            </footer>
+          </li>
         ))}
+      </ul>
+    </section>
+  );
+}
+
+/* =========================================================================
+   8. More to explore
+   ========================================================================= */
+
+export function MoreToExplore({ categories }: { categories: Category[] }) {
+  if (categories.length === 0) return null;
+
+  return (
+    <section className="shell pb-4">
+      <div className="rounded-[1.5rem] border border-stone p-6 md:p-8">
+        <p className="text-[0.6875rem] font-medium uppercase tracking-[0.2em] text-forest-soft">Also in store</p>
+        <ul className="mt-4 flex flex-wrap gap-2.5">
+          {categories.map((category) => (
+            <li key={category.id}>
+              <Link
+                href={`/shop/${category.slug}`}
+                className="inline-flex items-center gap-2.5 rounded-full border border-stone bg-paper py-1.5 pl-1.5 pr-4 text-[0.8125rem] text-ink transition-colors hover:border-ink"
+              >
+                <span className="relative h-8 w-8 overflow-hidden rounded-full bg-shell">
+                  <Media image={category.image} sizes="64px" className="absolute inset-0" />
+                </span>
+                {category.name}
+              </Link>
+            </li>
+          ))}
+        </ul>
       </div>
     </section>
   );

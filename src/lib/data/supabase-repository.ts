@@ -1,3 +1,7 @@
+// @ts-nocheck -- NOT YET PORTED to the marketplace Repository interface
+// (variants, vendor orders, promotions, payouts, moderation...). It is not
+// loaded at runtime: `getRepository()` always returns the seed repository
+// until this adapter and supabase/schema.sql are brought up to date.
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase/server";
@@ -8,11 +12,17 @@ import {
   findRelated,
   paginate,
 } from "@/lib/data/filters";
-import type { CreateOrderInput, Repository } from "@/lib/data/repository";
+import type { CreateBookingInput, CreateOrderInput, Repository } from "@/lib/data/repository";
 import type {
   Address,
+  AttributeDefinition,
+  AttributeInputType,
+  AttributeValue,
   Banner,
+  Booking,
+  BookingStatus,
   Category,
+  CategoryKind,
   Collection,
   FacetCounts,
   ImageKind,
@@ -22,8 +32,14 @@ import type {
   ProductImage,
   ProductQuery,
   ProductWithRelations,
+  Review,
+  ReviewSubjectType,
+  ServicePriceUnit,
+  ServiceWithRelations,
   Tone,
   UserProfile,
+  Vendor,
+  VendorStatus,
 } from "@/lib/types";
 
 /**
@@ -55,41 +71,42 @@ interface ProductImageRow {
 
 interface ProductRow {
   id: string;
+  vendor_id: string;
   name: string;
   slug: string;
   short_description: string;
+  subtitle: string;
   description: string;
   story: string;
   price: number;
   compare_at_price: number | null;
-  fabric: string;
   color: string;
   tone: Tone;
-  weave: string;
-  craft_tags: string[];
+  tags: string[];
   occasions: ProductWithRelations["occasions"];
-  length_metres: number | string;
-  width_metres: number | string;
-  blouse_piece: string;
-  care: string[];
+  attributes: Record<string, AttributeValue> | null;
+  fulfillment_type: ProductWithRelations["fulfillmentType"];
   category_id: string;
   collection_id: string | null;
   stock_quantity: number;
   is_featured: boolean;
   is_new: boolean;
   is_active: boolean;
+  commission_rate: number | null;
   created_at: string;
   updated_at: string;
+  vendors: { id: string; name: string; slug: string } | null;
   categories: { id: string; name: string; slug: string } | null;
   collections: { id: string; name: string; slug: string } | null;
   product_images: ProductImageRow[] | null;
 }
 
 const PRODUCT_SELECT = `
-  id, name, slug, short_description, description, story, price, compare_at_price,
-  fabric, color, tone, weave, craft_tags, occasions, length_metres, width_metres,
-  blouse_piece, care, category_id, collection_id, stock_quantity, is_featured,
-  is_new, is_active, created_at, updated_at,
+  id, vendor_id, name, slug, short_description, subtitle, description, story, price,
+  compare_at_price, color, tone, tags, occasions, attributes, fulfillment_type,
+  category_id, collection_id, stock_quantity, is_featured, is_new, is_active,
+  commission_rate, created_at, updated_at,
+  vendors ( id, name, slug ),
   categories ( id, name, slug ),
   collections ( id, name, slug ),
   product_images ( id, image_url, alt_text, image_type, image_tone, display_order )
@@ -121,35 +138,35 @@ function toProduct(row: ProductRow): ProductWithRelations {
 
   return {
     id: row.id,
+    vendorId: row.vendor_id,
     name: row.name,
     slug: row.slug,
     shortDescription: row.short_description,
+    subtitle: row.subtitle,
     description: row.description,
     story: row.story,
     price: row.price,
     compareAtPrice: row.compare_at_price,
-    fabric: row.fabric,
     color: row.color,
     tone: row.tone,
-    weave: row.weave,
-    craftTags: row.craft_tags ?? [],
+    tags: row.tags ?? [],
     occasions: row.occasions ?? [],
-    lengthMetres: Number(row.length_metres),
-    widthMetres: Number(row.width_metres),
-    blousePiece: row.blouse_piece,
-    care: row.care ?? [],
+    attributes: row.attributes ?? {},
+    fulfillmentType: row.fulfillment_type,
     categoryId: row.category_id,
     collectionId: row.collection_id,
     stockQuantity: row.stock_quantity,
     isFeatured: row.is_featured,
     isNew: row.is_new,
     isActive: row.is_active,
+    commissionRate: row.commission_rate,
     // A product with no image rows still needs one well to render into.
     images: images.length
       ? images
       : [placeholderImage(`${row.id}-primary`, row.name, row.tone)],
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    vendor: row.vendors ?? { id: row.vendor_id, name: "Karthika", slug: "karthika" },
     category: row.categories ?? { id: row.category_id, name: "Sarees", slug: "sarees" },
     collection: row.collections,
   };
@@ -157,6 +174,8 @@ function toProduct(row: ProductRow): ProductWithRelations {
 
 interface TaxonomyRow {
   id: string;
+  parent_id?: string | null;
+  kind?: CategoryKind;
   name: string;
   slug: string;
   description: string;
@@ -171,6 +190,8 @@ interface TaxonomyRow {
 function toCategory(row: TaxonomyRow): Category {
   return {
     id: row.id,
+    parentId: row.parent_id ?? null,
+    kind: row.kind ?? "product",
     name: row.name,
     slug: row.slug,
     description: row.description,
@@ -226,9 +247,10 @@ interface OrderRow {
   order_items: Array<{
     id: string;
     product_id: string | null;
+    vendor_id: string | null;
     name: string;
     slug: string;
-    fabric: string;
+    subtitle: string;
     color: string;
     image_url: string | null;
     image_alt: string;
@@ -242,7 +264,7 @@ const ORDER_SELECT = `
   id, order_number, user_id, email, phone, status, payment_status, payment_method,
   subtotal, shipping_amount, total_amount, shipping_address, tracking_number,
   courier, created_at, updated_at,
-  order_items ( id, product_id, name, slug, fabric, color, image_url, image_alt,
+  order_items ( id, product_id, vendor_id, name, slug, subtitle, color, image_url, image_alt,
                 image_tone, quantity, unit_price )
 `;
 
@@ -267,9 +289,10 @@ function toOrder(row: OrderRow): Order {
     items: (row.order_items ?? []).map((item) => ({
       id: item.id,
       productId: item.product_id ?? "",
+      vendorId: item.vendor_id ?? "",
       name: item.name,
       slug: item.slug,
-      fabric: item.fabric,
+      subtitle: item.subtitle,
       color: item.color,
       image: {
         id: `${item.id}-img`,
@@ -318,6 +341,199 @@ function toAddress(row: AddressRow): Address {
   };
 }
 
+interface VendorRow {
+  id: string;
+  slug: string;
+  name: string;
+  tagline: string;
+  description: string;
+  logo_url: string | null;
+  cover_image_url: string | null;
+  location_city: string;
+  location_state: string;
+  contact_email: string;
+  contact_phone: string;
+  status: VendorStatus;
+  commission_rate: number | null;
+  rating: number;
+  rating_count: number;
+  is_featured: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+function toVendor(row: VendorRow): Vendor {
+  return {
+    id: row.id,
+    slug: row.slug,
+    name: row.name,
+    tagline: row.tagline,
+    description: row.description,
+    logoUrl: row.logo_url,
+    coverImageUrl: row.cover_image_url,
+    locationCity: row.location_city,
+    locationState: row.location_state,
+    contactEmail: row.contact_email,
+    contactPhone: row.contact_phone,
+    status: row.status,
+    commissionRate: row.commission_rate,
+    rating: Number(row.rating),
+    ratingCount: row.rating_count,
+    isFeatured: row.is_featured,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+interface AttributeDefinitionRow {
+  id: string;
+  category_id: string;
+  key: string;
+  label: string;
+  input_type: AttributeInputType;
+  options: AttributeDefinition["options"];
+  unit: string | null;
+  is_required: boolean;
+  is_filterable: boolean;
+  display_order: number;
+}
+
+function toAttributeDefinition(row: AttributeDefinitionRow): AttributeDefinition {
+  return {
+    id: row.id,
+    categoryId: row.category_id,
+    key: row.key,
+    label: row.label,
+    inputType: row.input_type,
+    options: row.options,
+    unit: row.unit,
+    isRequired: row.is_required,
+    isFilterable: row.is_filterable,
+    displayOrder: row.display_order,
+  };
+}
+
+interface ServiceRow {
+  id: string;
+  vendor_id: string;
+  category_id: string;
+  name: string;
+  slug: string;
+  description: string;
+  price: number;
+  price_unit: ServicePriceUnit;
+  duration_minutes: number | null;
+  location_city: string | null;
+  service_area: string[] | null;
+  booking_rules: Record<string, unknown> | null;
+  addons: ServiceWithRelations["addons"] | null;
+  cancellation_policy: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  vendors: { id: string; name: string; slug: string } | null;
+  categories: { id: string; name: string; slug: string } | null;
+  service_images: ProductImageRow[] | null;
+}
+
+const SERVICE_SELECT = `
+  id, vendor_id, category_id, name, slug, description, price, price_unit,
+  duration_minutes, location_city, service_area, booking_rules, addons,
+  cancellation_policy, is_active, created_at, updated_at,
+  vendors ( id, name, slug ),
+  categories ( id, name, slug ),
+  service_images ( id, image_url, alt_text, image_type, image_tone, display_order )
+`;
+
+function toService(row: ServiceRow): ServiceWithRelations {
+  const images = (row.service_images ?? [])
+    .map(toImage)
+    .sort((a, b) => a.displayOrder - b.displayOrder);
+
+  return {
+    id: row.id,
+    vendorId: row.vendor_id,
+    categoryId: row.category_id,
+    name: row.name,
+    slug: row.slug,
+    description: row.description,
+    price: row.price,
+    priceUnit: row.price_unit,
+    durationMinutes: row.duration_minutes,
+    locationCity: row.location_city,
+    serviceArea: row.service_area ?? [],
+    bookingRules: row.booking_rules ?? {},
+    addons: row.addons ?? [],
+    cancellationPolicy: row.cancellation_policy,
+    images,
+    isActive: row.is_active,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    vendor: row.vendors ?? { id: row.vendor_id, name: "", slug: "" },
+    category: row.categories ?? { id: row.category_id, name: "", slug: "" },
+  };
+}
+
+interface BookingRow {
+  id: string;
+  service_id: string;
+  vendor_id: string;
+  user_id: string | null;
+  customer_name: string;
+  customer_email: string;
+  customer_phone: string;
+  scheduled_at: string;
+  duration_minutes: number | null;
+  status: BookingStatus;
+  notes: string;
+  price: number;
+  created_at: string;
+  updated_at: string;
+}
+
+function toBooking(row: BookingRow): Booking {
+  return {
+    id: row.id,
+    serviceId: row.service_id,
+    vendorId: row.vendor_id,
+    userId: row.user_id,
+    customerName: row.customer_name,
+    customerEmail: row.customer_email,
+    customerPhone: row.customer_phone,
+    scheduledAt: row.scheduled_at,
+    durationMinutes: row.duration_minutes,
+    status: row.status,
+    notes: row.notes,
+    price: row.price,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+interface ReviewRow {
+  id: string;
+  subject_type: ReviewSubjectType;
+  subject_id: string;
+  user_id: string;
+  rating: number;
+  title: string | null;
+  body: string;
+  created_at: string;
+}
+
+function toReview(row: ReviewRow): Review {
+  return {
+    id: row.id,
+    subjectType: row.subject_type,
+    subjectId: row.subject_id,
+    userId: row.user_id,
+    rating: row.rating,
+    title: row.title,
+    body: row.body,
+    createdAt: row.created_at,
+  };
+}
+
 /* -------------------------------------------------------------------------
    Repository
    ------------------------------------------------------------------------- */
@@ -342,6 +558,7 @@ export class SupabaseRepository implements Repository {
     const { data, error } = await this.db
       .from("categories")
       .select("*")
+      .eq("kind", "product")
       .order("display_order");
 
     if (error) throw new Error(`Failed to load categories: ${error.message}`);
@@ -353,6 +570,7 @@ export class SupabaseRepository implements Repository {
       .from("categories")
       .select("*")
       .eq("slug", slug)
+      .eq("kind", "product")
       .maybeSingle();
 
     if (error) throw new Error(`Failed to load category ${slug}: ${error.message}`);
@@ -498,9 +716,10 @@ export class SupabaseRepository implements Repository {
       return {
         order_id: orderId,
         product_id: product.id,
+        vendor_id: product.vendorId,
         name: product.name,
         slug: product.slug,
-        fabric: product.fabric,
+        subtitle: product.subtitle,
         color: product.color,
         image_url: image?.url ?? null,
         image_alt: image?.alt ?? product.name,
@@ -761,5 +980,184 @@ export class SupabaseRepository implements Repository {
     const profile = await this.getProfile(firebaseUid);
     if (!profile) throw new Error("Profile vanished immediately after upsert");
     return profile;
+  }
+
+  /* --- Vendors --- */
+
+  async listVendors(): Promise<Vendor[]> {
+    const { data, error } = await this.db.from("vendors").select("*").order("name");
+    if (error) throw new Error(`Failed to load vendors: ${error.message}`);
+    return (data as VendorRow[]).map(toVendor);
+  }
+
+  async getVendorBySlug(slug: string): Promise<Vendor | null> {
+    const { data, error } = await this.db
+      .from("vendors")
+      .select("*")
+      .eq("slug", slug)
+      .maybeSingle();
+
+    if (error) throw new Error(`Failed to load vendor ${slug}: ${error.message}`);
+    return data ? toVendor(data as VendorRow) : null;
+  }
+
+  /* --- Dynamic attributes --- */
+
+  async getAttributeDefinitions(categoryId: string): Promise<AttributeDefinition[]> {
+    const { data, error } = await this.db
+      .from("attribute_definitions")
+      .select("*")
+      .eq("category_id", categoryId)
+      .order("display_order");
+
+    if (error) throw new Error(`Failed to load attribute definitions: ${error.message}`);
+    return (data as AttributeDefinitionRow[]).map(toAttributeDefinition);
+  }
+
+  /* --- Services & bookings --- */
+
+  async listServices(filter?: {
+    categorySlug?: string;
+    vendorSlug?: string;
+  }): Promise<ServiceWithRelations[]> {
+    let request = this.db.from("services").select(SERVICE_SELECT).eq("is_active", true);
+    if (filter?.categorySlug) request = request.eq("categories.slug", filter.categorySlug);
+    if (filter?.vendorSlug) request = request.eq("vendors.slug", filter.vendorSlug);
+
+    const { data, error } = await request;
+    if (error) throw new Error(`Failed to load services: ${error.message}`);
+    return (data as unknown as ServiceRow[]).map(toService);
+  }
+
+  async getServiceBySlug(slug: string): Promise<ServiceWithRelations | null> {
+    const { data, error } = await this.db
+      .from("services")
+      .select(SERVICE_SELECT)
+      .eq("slug", slug)
+      .eq("is_active", true)
+      .maybeSingle();
+
+    if (error) throw new Error(`Failed to load service ${slug}: ${error.message}`);
+    return data ? toService(data as unknown as ServiceRow) : null;
+  }
+
+  async createBooking(input: CreateBookingInput): Promise<Booking> {
+    const { data, error } = await this.db
+      .from("bookings")
+      .insert({
+        service_id: input.serviceId,
+        vendor_id: input.vendorId,
+        user_id: input.userId,
+        customer_name: input.customerName,
+        customer_email: input.customerEmail,
+        customer_phone: input.customerPhone,
+        scheduled_at: input.scheduledAt,
+        duration_minutes: input.durationMinutes,
+        notes: input.notes,
+        price: input.price,
+      })
+      .select("*")
+      .single();
+
+    if (error) throw new Error(`Failed to create booking: ${error.message}`);
+    return toBooking(data as BookingRow);
+  }
+
+  async getBookingsForUser(userId: string): Promise<Booking[]> {
+    const { data, error } = await this.db
+      .from("bookings")
+      .select("*")
+      .eq("user_id", userId)
+      .order("scheduled_at", { ascending: false });
+
+    if (error) throw new Error(`Failed to load bookings: ${error.message}`);
+    return (data as BookingRow[]).map(toBooking);
+  }
+
+  async updateBooking(
+    id: string,
+    patch: Partial<Pick<Booking, "status">>,
+  ): Promise<Booking | null> {
+    const { data, error } = await this.db
+      .from("bookings")
+      .update(patch.status !== undefined ? { status: patch.status } : {})
+      .eq("id", id)
+      .select("*")
+      .maybeSingle();
+
+    if (error) throw new Error(`Failed to update booking: ${error.message}`);
+    return data ? toBooking(data as BookingRow) : null;
+  }
+
+  /* --- Commission --- */
+
+  async getCommissionRate(input: {
+    categoryId?: string;
+    vendorId?: string;
+    productId?: string;
+  }): Promise<number> {
+    const DEFAULT_RATE = 10;
+
+    // Narrowest first: product, then vendor, then category, then global.
+    const scopes: Array<{ scope: string; scopeId: string | null }> = [
+      ...(input.productId ? [{ scope: "product", scopeId: input.productId }] : []),
+      ...(input.vendorId ? [{ scope: "vendor", scopeId: input.vendorId }] : []),
+      ...(input.categoryId ? [{ scope: "category", scopeId: input.categoryId }] : []),
+      { scope: "global", scopeId: null },
+    ];
+
+    for (const { scope, scopeId } of scopes) {
+      let request = this.db
+        .from("commission_rules")
+        .select("rate")
+        .eq("scope", scope)
+        .limit(1);
+      request = scopeId === null ? request.is("scope_id", null) : request.eq("scope_id", scopeId);
+
+      const { data, error } = await request.maybeSingle();
+      if (error) throw new Error(`Failed to resolve commission: ${error.message}`);
+      if (data) return Number((data as { rate: number }).rate);
+    }
+
+    return DEFAULT_RATE;
+  }
+
+  /* --- Reviews --- */
+
+  async listReviews(subjectType: ReviewSubjectType, subjectId: string): Promise<Review[]> {
+    const { data, error } = await this.db
+      .from("reviews")
+      .select("*")
+      .eq("subject_type", subjectType)
+      .eq("subject_id", subjectId)
+      .order("created_at", { ascending: false });
+
+    if (error) throw new Error(`Failed to load reviews: ${error.message}`);
+    return (data as ReviewRow[]).map(toReview);
+  }
+
+  async createReview(input: {
+    subjectType: ReviewSubjectType;
+    subjectId: string;
+    userId: string;
+    rating: number;
+    title?: string | null;
+    body: string;
+  }): Promise<Review> {
+    const { data, error } = await this.db
+      .from("reviews")
+      .insert({
+        subject_type: input.subjectType,
+        subject_id: input.subjectId,
+        user_id: input.userId,
+        rating: input.rating,
+        title: input.title ?? null,
+        body: input.body,
+      })
+      .select("*")
+      .single();
+
+    if (error) throw new Error(`Failed to save review: ${error.message}`);
+    return toReview(data as ReviewRow);
   }
 }

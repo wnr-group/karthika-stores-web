@@ -27,9 +27,10 @@ const STORAGE_KEY = "karthika.bag.v1";
 
 export interface BagLine {
   productId: string;
+  vendorId: string;
   slug: string;
   name: string;
-  fabric: string;
+  subtitle: string;
   color: string;
   image: ProductImage;
   /** Display only. The server re-prices at checkout. */
@@ -122,9 +123,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
         ...current,
         {
           productId: product.id,
+          vendorId: product.vendorId,
           slug: product.slug,
           name: product.name,
-          fabric: product.fabric,
+          subtitle: product.subtitle,
           color: product.color,
           image,
           price: product.price,

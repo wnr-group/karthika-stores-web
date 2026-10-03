@@ -112,7 +112,7 @@ export function MobileNav({ open, onClose }: { open: boolean; onClose: () => voi
             onClick={onClose}
             className="block text-[0.6875rem] uppercase tracking-[0.18em] text-graphite"
           >
-            Visit the atelier
+            Contact support
           </Link>
 
           <p className="pt-6 text-[0.6875rem] leading-relaxed text-taupe">

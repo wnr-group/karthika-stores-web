@@ -28,7 +28,7 @@ export function WhatsAppBubble() {
   if (pathname.startsWith("/checkout") || pathname.startsWith("/admin")) return null;
 
   const message = encodeURIComponent(
-    "Hello Karthika, I have a question about a saree on your website.",
+    "Hello Haat, I have a question about an order.",
   );
 
   return (

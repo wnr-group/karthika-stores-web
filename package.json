@@ -4,7 +4,7 @@
   "private": true,
   "description": "Karthika \u2014 a saree atelier. Editorial e-commerce built with Next.js, Supabase and Firebase Auth.",
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",

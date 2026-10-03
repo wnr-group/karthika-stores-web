@@ -220,7 +220,7 @@ export function SearchOverlay({ open, onClose }: { open: boolean; onClose: () =>
                 will find it on the looms.
               </p>
               <Link href="/contact" onClick={onClose} className="link-rule mt-6 inline-block text-sm">
-                Ask the atelier
+                Ask us
               </Link>
             </div>
           ) : null}
@@ -267,7 +267,7 @@ export function SearchOverlay({ open, onClose }: { open: boolean; onClose: () =>
                       <p className="mt-3 font-display text-[1.0625rem] leading-snug text-ink">
                         {product.name}
                       </p>
-                      <p className="mt-1 text-[0.75rem] text-taupe">{product.fabric}</p>
+                      <p className="mt-1 text-[0.75rem] text-taupe">{product.subtitle}</p>
                       <p className="tnum mt-1 text-[0.8125rem] text-ink">
                         {formatPrice(product.price)}
                       </p>

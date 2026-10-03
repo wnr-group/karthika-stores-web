@@ -155,7 +155,7 @@ export function Header() {
             type="button"
             onClick={() => setSearchOpen(true)}
             aria-label="Search"
-            className="p-2 text-ink transition-colors hover:text-terracotta"
+            className="p-2 text-ink transition-colors hover:text-brand"
           >
             <SearchIcon className="h-[1.15rem] w-[1.15rem]" />
           </button>
@@ -163,7 +163,7 @@ export function Header() {
           <Link
             href={user ? "/account" : "/login"}
             aria-label={user ? "Your account" : "Sign in"}
-            className="hidden p-2 text-ink transition-colors hover:text-terracotta md:block"
+            className="hidden p-2 text-ink transition-colors hover:text-brand md:block"
           >
             <UserIcon className="h-[1.15rem] w-[1.15rem]" />
           </Link>
@@ -171,7 +171,7 @@ export function Header() {
           <Link
             href="/wishlist"
             aria-label={`Wishlist, ${wishCount} saved`}
-            className="relative p-2 text-ink transition-colors hover:text-terracotta"
+            className="relative p-2 text-ink transition-colors hover:text-brand"
           >
             <HeartIcon className="h-[1.15rem] w-[1.15rem]" />
             <Badge count={wishCount} />
@@ -181,7 +181,7 @@ export function Header() {
             type="button"
             onClick={openBag}
             aria-label={`Bag, ${bagCount} ${bagCount === 1 ? "item" : "items"}`}
-            className="relative p-2 text-ink transition-colors hover:text-terracotta"
+            className="relative p-2 text-ink transition-colors hover:text-brand"
           >
             <BagIcon className="h-[1.15rem] w-[1.15rem]" />
             <Badge count={bagCount} />
@@ -213,20 +213,13 @@ export function Header() {
 
 function Wordmark({ compact = false }: { compact?: boolean }) {
   return (
-    <span className="flex flex-col items-center lg:items-start">
-      <span
-        className={cn(
-          "font-display leading-none tracking-[0.34em] text-ink transition-[font-size] duration-[300ms]",
-          compact ? "text-[1.05rem]" : "text-[1.05rem] lg:text-[1.35rem]",
-        )}
-      >
-        KARTHIKA
-      </span>
-      {!compact ? (
-        <span className="mt-1 hidden text-[0.5rem] uppercase tracking-[0.3em] text-taupe lg:block">
-          Saree Atelier
-        </span>
-      ) : null}
+    <span
+      className={cn(
+        "font-display leading-none tracking-[-0.01em] text-ink transition-[font-size] duration-[300ms]",
+        compact ? "text-[1.6rem]" : "text-[1.6rem] lg:text-[2.1rem]",
+      )}
+    >
+      haat<span className="text-brand">.</span>
     </span>
   );
 }
@@ -273,10 +266,10 @@ function NavPanel({ group }: { group: NavGroup }) {
             <Media
               image={{
                 id: `nav-${group.label}`,
-                url: null,
-                alt: group.feature.title,
+                url: group.feature.image,
+                alt: group.feature.alt,
                 kind: "lifestyle",
-                tone: group.feature.tone as Tone,
+                tone: "sand" as Tone,
                 displayOrder: 0,
               }}
               className="absolute inset-0 transition-transform duration-[600ms] ease-[cubic-bezier(0.22,0.61,0.36,1)] group-hover:scale-[1.03]"

@@ -55,6 +55,7 @@ export async function POST(request: Request) {
 
   const order = await repository.createOrder({
     userId: user?.uid ?? null,
+    customerName: address.name,
     email: contact.email,
     phone: contact.phone,
     shippingAddress: {
@@ -68,18 +69,26 @@ export async function POST(request: Request) {
       country: address.country,
     },
     paymentMethod,
-    // Cash on delivery is settled with the courier, so it is "confirmed" the
-    // moment the order is placed. A Razorpay order stays pending until the
-    // customer pays on the confirmation page.
-    paymentStatus: paymentMethod === "cod" ? "pending" : "pending",
-    lines: priced.lines.map((line) => ({
-      productId: line.productId,
-      quantity: line.quantity,
-      unitPrice: line.unitPrice,
+    // Both methods start pending: COD settles with the courier, Razorpay on
+    // the confirmation page via /api/razorpay/verify.
+    paymentStatus: "pending",
+    couponCode: priced.coupon?.code || null,
+    // One vendor order per group, each with its own delivery and discount.
+    groups: priced.groups.map((group) => ({
+      vendorId: group.vendorId,
+      fulfillmentType: group.fulfillmentType,
+      shippingAmount: group.shipping,
+      discountAmount: group.discount,
+      lines: priced.lines
+        .filter((line) => group.lineKeys.includes(line.key))
+        .map((line) => ({
+          productId: line.productId,
+          variantId: line.variantId,
+          quantity: line.quantity,
+          unitPrice: line.unitPrice,
+          customization: line.customization,
+        })),
     })),
-    subtotal: priced.totals.subtotal,
-    shippingAmount: priced.totals.shipping,
-    totalAmount: priced.totals.total,
   });
 
   if (paymentMethod === "cod") {

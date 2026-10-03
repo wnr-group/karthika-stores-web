@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Cormorant_Garamond, Inter } from "next/font/google";
+import { Cormorant_Garamond, Jost } from "next/font/google";
 
 import { AnnouncementBar } from "@/components/layout/announcement-bar";
 import { SiteChrome } from "@/components/layout/chrome";
@@ -20,29 +20,29 @@ const cormorant = Cormorant_Garamond({
   display: "swap",
 });
 
-/* The UI face. Everything functional is set in this. */
-const inter = Inter({
+/* The UI face. A soft geometric sans; everything functional is set in this. */
+const jost = Jost({
   subsets: ["latin"],
   weight: ["300", "400", "500"],
-  variable: "--font-inter",
+  variable: "--font-jost",
   display: "swap",
 });
 
 export const metadata: Metadata = {
   metadataBase: new URL(site.url),
   title: {
-    default: `${site.name} — Handwoven sarees from Kanchipuram and Banaras`,
+    default: `${site.name} — Products, local brands & services`,
     template: `%s — ${site.name}`,
   },
   description: site.description,
   applicationName: site.name,
   keywords: [
-    "handwoven sarees",
-    "Kanchipuram silk saree",
-    "Banarasi saree",
-    "organza saree",
-    "linen saree",
-    "saree boutique Chennai",
+    "online marketplace India",
+    "independent sellers",
+    "local services",
+    "jewellery",
+    "homemade food",
+    "sarees",
   ],
   authors: [{ name: site.legalName }],
   openGraph: {
@@ -50,12 +50,12 @@ export const metadata: Metadata = {
     locale: site.locale,
     url: site.url,
     siteName: site.name,
-    title: `${site.name} — A saree atelier`,
+    title: `${site.name} — ${site.tagline}`,
     description: site.description,
   },
   twitter: {
     card: "summary_large_image",
-    title: `${site.name} — A saree atelier`,
+    title: `${site.name} — ${site.tagline}`,
     description: site.description,
   },
   robots: {
@@ -68,14 +68,14 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#f4efe6",
+  themeColor: "#10362f",
   width: "device-width",
   initialScale: 1,
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en-IN" className={`${cormorant.variable} ${inter.variable}`}>
+    <html lang="en-IN" className={`${cormorant.variable} ${jost.variable}`}>
       <body className="flex min-h-screen flex-col">
         <Providers>
           <a

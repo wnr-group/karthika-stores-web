@@ -1,15 +1,17 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { Fragment } from "react";
 
 import { AddToBag } from "@/components/product/add-to-bag";
 import { ProductGallery } from "@/components/product/gallery";
 import { ProductGrid } from "@/components/product/product-card";
 import { WishlistButton } from "@/components/product/wishlist-button";
-import { Accordion } from "@/components/ui/accordion";
+import { Accordion, type AccordionItem } from "@/components/ui/accordion";
 import { Breadcrumb, Price, StockNote, Tag } from "@/components/ui/primitives";
 import { getRepository } from "@/lib/data/repository";
 import { site } from "@/lib/site";
-import type { ProductWithRelations } from "@/lib/types";
+import type { AttributeDefinition, ProductWithRelations } from "@/lib/types";
+import { titleFromSlug } from "@/lib/utils";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -47,14 +49,17 @@ export default async function ProductPage({ params }: PageProps) {
 
   if (!product) notFound();
 
-  const related = await repository.getRelatedProducts(product.slug, 4);
+  const [related, attributeDefinitions] = await Promise.all([
+    repository.getRelatedProducts(product.slug, 4),
+    repository.getAttributeDefinitions(product.categoryId),
+  ]);
 
   return (
     <div className="shell pb-24 pt-8 md:pt-10">
       <Breadcrumb
         trail={[
           { label: "Home", href: "/" },
-          { label: "Sarees", href: "/shop" },
+          { label: "Shop", href: "/shop" },
           { label: product.category.name, href: `/shop/${product.category.slug}` },
           { label: product.name },
         ]}
@@ -64,9 +69,9 @@ export default async function ProductPage({ params }: PageProps) {
         <ProductGallery images={product.images} name={product.name} />
 
         <div className="lg:sticky lg:top-28 lg:self-start">
-          {product.craftTags.length ? (
+          {product.tags.length ? (
             <div className="mb-5 flex flex-wrap gap-2">
-              {product.craftTags.map((tag) => (
+              {product.tags.map((tag) => (
                 <Tag key={tag}>{tag}</Tag>
               ))}
             </div>
@@ -74,7 +79,11 @@ export default async function ProductPage({ params }: PageProps) {
 
           <h1 className="display-md">{product.name}</h1>
           <p className="mt-2 text-[0.9375rem] text-taupe">
-            {product.fabric} &middot; {product.color}
+            {product.subtitle} &middot; {product.color}
+          </p>
+          <p className="mt-0.5 text-[0.8125rem] text-taupe">
+            Sold by{" "}
+            <span className="text-ink">{product.vendor.name}</span>
           </p>
 
           <Price
@@ -117,33 +126,7 @@ export default async function ProductPage({ params }: PageProps) {
                 label: "The story",
                 content: <p>{product.story}</p>,
               },
-              {
-                label: "Details",
-                content: (
-                  <dl className="grid grid-cols-2 gap-x-6 gap-y-2">
-                    <dt className="text-taupe">Fabric</dt>
-                    <dd className="text-ink">{product.fabric}</dd>
-                    <dt className="text-taupe">Weave</dt>
-                    <dd className="text-ink">{product.weave || "—"}</dd>
-                    <dt className="text-taupe">Length</dt>
-                    <dd className="tnum text-ink">{product.lengthMetres} m</dd>
-                    <dt className="text-taupe">Width</dt>
-                    <dd className="tnum text-ink">{product.widthMetres} m</dd>
-                    <dt className="text-taupe">Blouse piece</dt>
-                    <dd className="text-ink">{product.blousePiece || "—"}</dd>
-                  </dl>
-                ),
-              },
-              {
-                label: "Care",
-                content: (
-                  <ul className="list-disc space-y-1.5 pl-4">
-                    {product.care.map((line, index) => (
-                      <li key={index}>{line}</li>
-                    ))}
-                  </ul>
-                ),
-              },
+              ...attributeAccordionItems(product.attributes, attributeDefinitions),
             ]}
           />
         </div>
@@ -159,6 +142,69 @@ export default async function ProductPage({ params }: PageProps) {
       <ProductSchema product={product} />
     </div>
   );
+}
+
+/**
+ * Turns a product's `attributes` bag into the page's "Details" and, when
+ * there is at least one list-valued attribute (care instructions, what's
+ * included, ...), a second tab for those — generically, for whatever
+ * category this product belongs to, not just a saree's fixed field set.
+ */
+function attributeAccordionItems(
+  attributes: Record<string, unknown>,
+  definitions: AttributeDefinition[],
+): AccordionItem[] {
+  const labelByKey = new Map(definitions.map((def) => [def.key, def] as const));
+  const orderByKey = new Map(definitions.map((def) => [def.key, def.displayOrder] as const));
+
+  const entries = Object.entries(attributes)
+    .filter(([, value]) => value !== null && value !== undefined && value !== "")
+    .sort(([a], [b]) => (orderByKey.get(a) ?? 99) - (orderByKey.get(b) ?? 99));
+
+  const scalarEntries = entries.filter(([, value]) => !Array.isArray(value));
+  const listEntries = entries.filter(([, value]) => Array.isArray(value)) as Array<
+    [string, string[]]
+  >;
+
+  const items: AccordionItem[] = [];
+
+  if (scalarEntries.length) {
+    items.push({
+      label: "Details",
+      content: (
+        <dl className="grid grid-cols-2 gap-x-6 gap-y-2">
+          {scalarEntries.map(([key, value]) => {
+            const definition = labelByKey.get(key);
+            return (
+              <Fragment key={key}>
+                <dt className="text-taupe">{definition?.label ?? titleFromSlug(key)}</dt>
+                <dd className={definition?.inputType === "number" ? "tnum text-ink" : "text-ink"}>
+                  {String(value)}
+                  {definition?.unit ? ` ${definition.unit}` : ""}
+                </dd>
+              </Fragment>
+            );
+          })}
+        </dl>
+      ),
+    });
+  }
+
+  for (const [key, value] of listEntries) {
+    const definition = labelByKey.get(key);
+    items.push({
+      label: definition?.label ?? titleFromSlug(key),
+      content: (
+        <ul className="list-disc space-y-1.5 pl-4">
+          {value.map((line, index) => (
+            <li key={index}>{line}</li>
+          ))}
+        </ul>
+      ),
+    });
+  }
+
+  return items;
 }
 
 /** Product structured data, for the rich result in search. */

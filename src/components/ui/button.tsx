@@ -4,7 +4,7 @@ import type { ComponentPropsWithoutRef, ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 /**
- * Buttons are square-cornered, letterspaced and small. There is exactly one
+ * Buttons are pill-shaped, letterspaced and small. There is exactly one
  * filled button on any given screen; everything else is a hairline outline or
  * a plain underlined link.
  */
@@ -13,13 +13,13 @@ type Variant = "solid" | "outline" | "quiet" | "ghost";
 type Size = "sm" | "md" | "lg";
 
 const BASE =
-  "inline-flex items-center justify-center gap-2 rounded-none font-medium uppercase tracking-[0.16em] transition-colors duration-[240ms] ease-[cubic-bezier(0.22,0.61,0.36,1)] disabled:pointer-events-none disabled:opacity-40";
+  "inline-flex items-center justify-center gap-2 rounded-full font-medium uppercase tracking-[0.16em] transition-colors duration-[240ms] ease-[cubic-bezier(0.22,0.61,0.36,1)] disabled:pointer-events-none disabled:opacity-40";
 
 const VARIANTS: Record<Variant, string> = {
-  solid: "bg-ink text-paper hover:bg-terracotta-deep",
+  solid: "bg-ink text-paper hover:bg-forest-soft",
   outline: "border border-ink text-ink hover:bg-ink hover:text-paper",
   quiet: "border border-stone text-ink hover:border-ink",
-  ghost: "text-ink hover:text-terracotta",
+  ghost: "text-ink hover:text-brand",
 };
 
 const SIZES: Record<Size, string> = {

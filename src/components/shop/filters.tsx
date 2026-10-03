@@ -28,6 +28,11 @@ interface FiltersProps {
   total: number;
 }
 
+/** Old saree links used `?fabric=`; chips must remove it by that name. */
+function searchParamsHasLegacyFabric(): boolean {
+  return typeof window !== "undefined" && new URLSearchParams(window.location.search).has("fabric");
+}
+
 function useFilterNavigation() {
   const router = useRouter();
   const pathname = usePathname();
@@ -92,6 +97,8 @@ function useFilterNavigation() {
         "category",
         "collection",
         "fabric",
+        "vendor",
+        "fulfillment",
         "colour",
         "occasion",
         "minPrice",
@@ -99,6 +106,9 @@ function useFilterNavigation() {
         "availability",
       ]) {
         params.delete(key);
+      }
+      for (const key of [...params.keys()]) {
+        if (key.startsWith("a_")) params.delete(key);
       }
     });
   }, [commit]);
@@ -241,19 +251,20 @@ function FilterGroups({
         </Group>
       ) : null}
 
-      {facets.fabrics.length > 1 ? (
-        <Group label="Fabric">
-          {facets.fabrics.map((entry) => (
+      {/* Category-specific facets, generated from attribute definitions. */}
+      {facets.attributes.map((facet) => (
+        <Group key={facet.key} label={facet.label}>
+          {facet.values.map((entry) => (
             <Check
               key={entry.value}
-              label={entry.value}
+              label={entry.label}
               count={entry.count}
-              checked={selected.fabrics.includes(entry.value)}
-              onChange={() => toggle("fabric", entry.value)}
+              checked={(selected.attributes[facet.key] ?? []).includes(entry.value)}
+              onChange={() => toggle(`a_${facet.key}`, entry.value)}
             />
           ))}
         </Group>
-      ) : null}
+      ))}
 
       {facets.tones.length > 1 ? (
         <Group label="Colour">
@@ -473,10 +484,12 @@ function ActiveChips({
       label: slug.replace(/-/g, " "),
       onRemove: () => toggle("category", slug),
     })),
-    ...selected.fabrics.map((value) => ({
-      label: value,
-      onRemove: () => toggle("fabric", value),
-    })),
+    ...Object.entries(selected.attributes).flatMap(([key, values]) =>
+      values.map((value) => ({
+        label: value.replace(/-/g, " "),
+        onRemove: () => toggle(key === "fabric" && searchParamsHasLegacyFabric() ? "fabric" : `a_${key}`, value),
+      })),
+    ),
     ...selected.tones.map((value) => ({
       label: TONE_LABELS[value],
       onRemove: () => toggle("colour", value),

@@ -4,9 +4,9 @@ import { Listing } from "@/components/shop/listing";
 import type { RawSearchParams } from "@/lib/shop/search-params";
 
 export const metadata: Metadata = {
-  title: "Sarees",
+  title: "All products",
   description:
-    "Every saree in the Karthika collection: Kanchipuram silk, Banarasi brocade, organza, chanderi, linen and handloom cotton.",
+    "Shop products from independent sellers across fashion, jewellery, food, home, electronics, gifts and pets.",
   alternates: { canonical: "/shop" },
 };
 
@@ -22,14 +22,14 @@ export default async function ShopPage({
     <Listing
       searchParams={params}
       basePath="/shop"
-      eyebrow={search ? "Search" : "The collection"}
-      title={search ? `"${search}"` : "Sarees"}
+      eyebrow={search ? "Search" : "Shop"}
+      title={search ? `"${search}"` : "All products"}
       intro={
         search
           ? undefined
-          : "Everything we currently hold, from a three-thousand-rupee cotton to a wedding Kanchipuram. Filter by weave, colour or occasion, or ask us and we will point you at the right three."
+          : "Everything live on Haat right now, from independent sellers across India. Filter by category, seller, delivery option or price."
       }
-      breadcrumb={[{ label: "Home", href: "/" }, { label: search ? "Search" : "Sarees" }]}
+      breadcrumb={[{ label: "Home", href: "/" }, { label: search ? "Search" : "All products" }]}
     />
   );
 }

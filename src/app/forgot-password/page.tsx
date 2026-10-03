@@ -5,7 +5,7 @@ import { AuthForm } from "@/components/auth/auth-form";
 
 export const metadata: Metadata = {
   title: "Reset your password",
-  description: "Reset the password for your Karthika account.",
+  description: "Reset the password for your Haat account.",
   robots: { index: false, follow: false },
 };
 

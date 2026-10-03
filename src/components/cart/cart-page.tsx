@@ -119,7 +119,7 @@ export function CartPage() {
                         </Link>
                       </h2>
                       <p className="mt-1.5 text-[0.75rem] text-taupe">
-                        {line.fabric} &middot; {line.color}
+                        {line.subtitle} &middot; {line.color}
                       </p>
                     </div>
 

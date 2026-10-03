@@ -2,78 +2,211 @@ import type { Metadata } from "next";
 
 import { Hero } from "@/components/home/hero";
 import {
-  Assurances,
-  AtelierNote,
-  CategoryRail,
-  FeaturedCollection,
-  FestiveBand,
-  NewArrivals,
-  SilkStories,
-  Statement,
+  CategoryTiles,
+  JEWELLERY_STYLES,
+  JewelleryBox,
+  MoreToExplore,
+  NewArrivalsBand,
+  PromoPair,
+  Reviews,
+  TextileEdit,
+  ValueServices,
+  type ReviewCard,
 } from "@/components/home/sections";
 import { getRepository } from "@/lib/data/repository";
-import { site } from "@/lib/site";
+import { site, valueAddedServices } from "@/lib/site";
+import type { ProductImage, ProductWithRelations, Review } from "@/lib/types";
 
 export const metadata: Metadata = {
-  title: `${site.name} — Handwoven sarees from Kanchipuram and Banaras`,
+  title: `${site.name} — Imitation jewellery, textiles & services`,
   description: site.description,
   alternates: { canonical: "/" },
 };
 
+/** Verticals that get their own section; everything else goes in "More to explore". */
+const FEATURED_ROOTS = new Set(["jewellery", "fashion"]);
+
 /**
- * The homepage reads top to bottom as an issue: an opening spread, a written
- * statement, a shoppable feature, the shelf, then two stories and a note.
- * Every section has a different shape on purpose.
+ * The homepage leads with imitation jewellery, then textiles, then the
+ * value-added services, and closes with the rest of the shop. White ground,
+ * green bands and pale green panels.
  */
 export default async function HomePage() {
   const repository = await getRepository();
 
   // One parallel fetch for the whole page.
-  const [banners, categories, newSeason, silkStories, festive, newest, featured] =
-    await Promise.all([
-      repository.listBanners(),
-      repository.listCategories(),
-      repository.getCollectionBySlug("the-new-season"),
-      repository.getCollectionBySlug("silk-stories"),
-      repository.getCollectionBySlug("the-festive-edit"),
-      repository.queryProducts({ sort: "newest", perPage: 4, inStockOnly: true }),
-      repository.queryProducts({ isFeatured: true, perPage: 3 }),
-    ]);
-
-  const [banner] = banners;
-
-  const [newSeasonProducts, silkProducts] = await Promise.all([
-    repository.queryProducts({ collectionSlugs: ["the-new-season"], perPage: 3 }),
-    repository.queryProducts({ collectionSlugs: ["silk-stories"], perPage: 3 }),
+  const [categories, imitation, jewelleryCount, textiles, newest, reviews, featuredRange] = await Promise.all([
+    repository.listCategories({ kind: "product" }),
+    repository.queryProducts({ categorySlugs: ["imitation-jewellery"], sort: "newest", perPage: 8 }),
+    repository.queryProducts({ categorySlugs: ["jewellery"], perPage: 1 }),
+    repository.queryProducts({ categorySlugs: ["sarees", "kurtis", "dresses"], sort: "newest", perPage: 12 }),
+    repository.queryProducts({ sort: "newest", perPage: 24, inStockOnly: true }),
+    repository.listReviews({ subjectType: "product" }),
+    // Only to know which reviews are about jewellery or textiles.
+    repository.queryProducts({ categorySlugs: [...FEATURED_ROOTS], perPage: 500 }),
   ]);
+
+  // Only offer the style shortcuts that actually return pieces.
+  const styleCounts = await Promise.all(
+    JEWELLERY_STYLES.map((style) =>
+      repository.queryProducts({ categorySlugs: ["imitation-jewellery"], search: style, perPage: 1 }),
+    ),
+  );
+  const styles = JEWELLERY_STYLES.filter((_, index) => (styleCounts[index]?.total ?? 0) > 0);
+
+  const bySlug = new Map(categories.map((category) => [category.slug, category]));
+  const cover = (slug: string) => bySlug.get(slug)?.image;
+  const sarees = bySlug.get("sarees");
+  const weaves = sarees ? categories.filter((category) => category.parentId === sarees.id) : [];
+  const weaveCover = (slug: string) => weaves.find((weave) => weave.slug === slug)?.image;
+
+  const jewelleryPieces = imitation.items;
+  const textilePieces = pickVaried(textiles.items, 4);
+  const choker = jewelleryPieces.find((product) => /choker|bridal/i.test(product.name));
 
   return (
     <>
-      {banner ? <Hero banner={banner} /> : null}
+      <Hero
+        leadImage={pick("hero-lead", cover("jewellery"), jewelleryPieces[0]?.images[0])}
+        tiles={[
+          {
+            label: "Imitation jewellery",
+            href: "/shop/imitation-jewellery",
+            image: pick("hero-jewellery", jewelleryPieces[1]?.images[0], cover("fine-jewellery")),
+          },
+          {
+            label: "Sarees",
+            href: "/shop/sarees",
+            image: pick("hero-sarees", weaveCover("organza"), cover("sarees")),
+          },
+        ]}
+        stats={[
+          { value: String(jewelleryCount.total), label: "Jewellery designs" },
+          { value: String(textiles.total), label: "Sarees & textiles" },
+          { value: String(valueAddedServices.length), label: "In-house services" },
+        ]}
+      />
 
-      <Statement />
+      <CategoryTiles
+        tiles={[
+          { name: "Imitation jewellery", href: "/shop/imitation-jewellery", image: pick("cat-imitation", jewelleryPieces[2]?.images[0], cover("imitation-jewellery")) },
+          { name: "Fine jewellery", href: "/shop/fine-jewellery", image: pick("cat-fine", cover("fine-jewellery")) },
+          { name: "Sarees", href: "/shop/sarees", image: pick("cat-sarees", cover("sarees")) },
+          { name: "Kurtis", href: "/shop/kurtis", image: pick("cat-kurtis", cover("kurtis")) },
+          { name: "Dresses", href: "/shop/dresses", image: pick("cat-dresses", cover("dresses")) },
+          { name: "Accessories", href: "/shop/accessories", image: pick("cat-accessories", cover("accessories"), cover("handbags")) },
+        ]}
+      />
 
-      {newSeason && newSeasonProducts.items.length >= 3 ? (
-        <FeaturedCollection collection={newSeason} products={newSeasonProducts.items} />
-      ) : null}
+      <JewelleryBox products={jewelleryPieces} styles={styles} />
 
-      <CategoryRail categories={categories} />
+      <PromoPair
+        promos={[
+          {
+            eyebrow: "The wedding edit",
+            title: "Bridal sets & silks",
+            body: "Chokers, jhumkas and Kanchipurams picked to go together.",
+            cta: "Shop the edit",
+            href: "/collections/the-wedding-edit",
+            image: pick("promo-wedding", choker?.images[0], cover("jewellery")),
+          },
+          {
+            eyebrow: "Ready to wear",
+            title: "Stitched before it ships",
+            body: "Blouse stitching, fall & pico and pre-pleating on any saree.",
+            cta: "See our services",
+            href: "/#services",
+            image: pick("promo-services", textilePieces[2]?.images[0], weaveCover("cotton"), cover("sarees")),
+          },
+        ]}
+      />
 
-      <NewArrivals products={newest.items.length >= 4 ? newest.items : featured.items} />
+      <NewArrivalsBand products={arrivals(jewelleryPieces, textiles.items, newest.items)} />
 
-      {silkStories ? (
-        <SilkStories collection={silkStories} products={silkProducts.items} />
-      ) : null}
+      <TextileEdit weaves={weaves.slice(0, 6)} products={textilePieces} />
 
-      {festive ? <FestiveBand collection={festive} /> : null}
+      <ValueServices />
 
-      <AtelierNote />
+      <Reviews reviews={toReviewCards(reviews, new Set(featuredRange.items.map((product) => product.id)))} />
 
-      <Assurances />
+      <MoreToExplore
+        categories={categories.filter(
+          (category) => category.parentId === null && !FEATURED_ROOTS.has(category.slug),
+        )}
+      />
 
       <OrganizationSchema />
     </>
   );
+}
+
+/* -------------------------------------------------------------------------
+   Helpers
+   ------------------------------------------------------------------------- */
+
+/** The first image that exists, or a tonal placeholder so the layout holds. */
+function pick(id: string, ...candidates: Array<ProductImage | undefined>): ProductImage {
+  return (
+    candidates.find(Boolean) ?? {
+      id,
+      url: null,
+      alt: "",
+      kind: "lifestyle",
+      tone: "sand",
+      displayOrder: 0,
+    }
+  );
+}
+
+/** Up to `count` products, one per category before any category repeats. */
+function pickVaried(products: ProductWithRelations[], count: number) {
+  const seen = new Set<string>();
+  const first = products.filter((product) => {
+    if (seen.has(product.category.id)) return false;
+    seen.add(product.category.id);
+    return true;
+  });
+  const rest = products.filter((product) => !first.includes(product));
+  return [...first, ...rest].slice(0, count);
+}
+
+/** Jewellery and textiles first, interleaved, then a few from the rest of the shop. */
+function arrivals(
+  jewellery: ProductWithRelations[],
+  textiles: ProductWithRelations[],
+  newest: ProductWithRelations[],
+): ProductWithRelations[] {
+  const textileMix = pickVaried(textiles, 3);
+  const others = pickVaried(
+    newest.filter((product) => !FEATURED_ROOTS.has(product.categoryTrail[0]?.slug ?? "")),
+    3,
+  );
+
+  const mixed: ProductWithRelations[] = [];
+  for (let i = 0; i < 3; i++) {
+    const piece = jewellery[i];
+    const textile = textileMix[i];
+    if (piece) mixed.push(piece);
+    if (textile) mixed.push(textile);
+  }
+  mixed.push(...others);
+
+  return mixed.filter((product) => product.images[0]);
+}
+
+/** Short, well-rated reviews of jewellery and textiles. */
+function toReviewCards(reviews: Review[], productIds: Set<string>): ReviewCard[] {
+  return reviews
+    .filter((review) => productIds.has(review.subjectId))
+    .filter((review) => review.rating >= 4 && review.body.length >= 50 && review.body.length <= 220)
+    .slice(0, 3)
+    .map((review) => ({
+      id: review.id,
+      body: review.body,
+      author: review.authorName,
+      detail: `${review.authorCity} · on ${review.subjectName}`,
+      rating: review.rating,
+    }));
 }
 
 /**

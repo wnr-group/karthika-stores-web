@@ -15,6 +15,7 @@ const STATUS_TONE: Record<Order["status"], string> = {
   shipped: "text-ink",
   delivered: "text-success",
   cancelled: "text-taupe",
+  returned: "Returned",
 };
 
 const STATUS_LABEL: Record<Order["status"], string> = {
@@ -24,6 +25,7 @@ const STATUS_LABEL: Record<Order["status"], string> = {
   shipped: "On its way",
   delivered: "Delivered",
   cancelled: "Cancelled",
+  returned: "Returned",
 };
 
 export function OrderStatusLabel({ status }: { status: Order["status"] }) {
