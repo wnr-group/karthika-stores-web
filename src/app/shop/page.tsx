@@ -27,7 +27,7 @@ export default async function ShopPage({
       intro={
         search
           ? undefined
-          : "Everything live on Haat right now, from independent sellers across India. Filter by category, seller, delivery option or price."
+          : "Everything in the shop right now: imitation jewellery, sarees, kurtis and more. Filter by category, delivery option or price."
       }
       breadcrumb={[{ label: "Home", href: "/" }, { label: search ? "Search" : "All products" }]}
     />
