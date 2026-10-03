@@ -727,7 +727,7 @@ export const categories: Category[] = [
     image:
       seed.cover === "cover-sarees"
         ? SAREE_CATEGORY_COVERS["cat-kanchipuram"]!
-        : photo(seed.cover, seed.tone, `${seed.name} on Haat`),
+        : photo(seed.cover, seed.tone, seed.name),
     defaultProductTypeId: seed.productType ?? null,
     isActive: true,
     displayOrder: index + 1,
@@ -974,7 +974,7 @@ export const collections: Collection[] = [
     slug: "made-in-chennai",
     description: "Weavers, bakers, cooks and studios from one city.",
     story:
-      "Haat started in Chennai, and so did a third of its sellers. This is the city's shelf: Kanchipuram silk woven an hour away, tiffin from Mylapore, cakes from Besant Nagar.",
+      "We started in Chennai, and so did a third of our sellers. This is the city's shelf: Kanchipuram silk woven an hour away, tiffin from Mylapore, cakes from Besant Nagar.",
     image: photo("cover-local", "terracotta", "A neighbourhood shop front in Chennai"),
     isFeatured: false,
     displayOrder: 5,

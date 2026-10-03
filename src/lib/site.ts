@@ -7,9 +7,9 @@ import type { City, SubscriptionPlan } from "@/lib/types";
 
 export const site = {
   /** The marketplace's name. Changing it here renames the whole platform. */
-  name: "Haat",
+  name: "KS",
   /** Used in <title> suffixes and structured data. */
-  legalName: "Haat Marketplace Private Limited",
+  legalName: "KS",
   tagline: "Imitation jewellery, textiles & services",
   description:
     "Statement imitation jewellery, handwoven sarees and textiles, and the finishing services that go with them: stitching, draping, polishing and more.",
@@ -250,6 +250,8 @@ export const footerNav: Array<{ heading: string; links: NavLink[] }> = [
       { label: "Collections", href: "/collections" },
       { label: "Value-added services", href: "/#services" },
       { label: "Our story", href: "/about" },
+      { label: "Admin dashboard", href: "/admin" },
+      { label: "Vendor dashboard", href: "/vendor" },
     ],
   },
   {

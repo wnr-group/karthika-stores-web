@@ -2,10 +2,11 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 
 import { AuthForm } from "@/components/auth/auth-form";
+import { site } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Reset your password",
-  description: "Reset the password for your Haat account.",
+  description: `Reset the password for your ${site.name} account.`,
   robots: { index: false, follow: false },
 };
 

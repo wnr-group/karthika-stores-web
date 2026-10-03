@@ -590,7 +590,7 @@ export class MockRepository implements Repository {
       rating: 0,
       ratingCount: 0,
       followerCount: 0,
-      responseTime: "New on Haat",
+      responseTime: "Newly joined",
       createdAt: timestamp,
       updatedAt: timestamp,
     };

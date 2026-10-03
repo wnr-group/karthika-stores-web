@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { NewsletterForm } from "@/components/layout/newsletter-form";
+import { Logo } from "@/components/ui/logo";
 import { footerNav, site } from "@/lib/site";
 
 /**
@@ -18,8 +19,8 @@ export function Footer() {
       <div className="shell grid gap-14 py-16 lg:grid-cols-12 lg:gap-10 lg:py-20">
         {/* Masthead */}
         <div className="lg:col-span-5">
-          <p className="font-display text-[2rem] leading-none text-paper">haat<span className="text-sandal">.</span></p>
-          <p className="mt-1 text-[0.5rem] uppercase tracking-[0.3em] text-sandal/80">
+          <Logo tone="light" />
+          <p className="mt-3 text-[0.5rem] uppercase tracking-[0.3em] text-sandal/80">
             Imitation jewellery, textiles &amp; services
           </p>
 
@@ -64,7 +65,7 @@ export function Footer() {
       {/* Contact strip */}
       <div className="shell grid gap-8 border-t border-paper/10 py-10 md:grid-cols-3">
         <div>
-          <p className="eyebrow mb-3 !text-sandal">Haat HQ</p>
+          <p className="eyebrow mb-3 !text-sandal">Visit us</p>
           <address className="text-[0.8125rem] not-italic leading-relaxed text-paper/70">
             {site.contact.address.map((line) => (
               <span key={line} className="block">

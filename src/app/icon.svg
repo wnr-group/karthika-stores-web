@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <circle cx="24" cy="24" r="24" fill="#10362f"/>
+  <circle cx="24" cy="24" r="20.25" fill="none" stroke="#e9d6b8" stroke-opacity="0.55" stroke-width="0.75"/>
+  <text x="24" y="30.6" text-anchor="middle" fill="#e9d6b8" font-family="Georgia, 'Times New Roman', serif" font-size="19" font-weight="700" letter-spacing="-0.4">KS</text>
+</svg>

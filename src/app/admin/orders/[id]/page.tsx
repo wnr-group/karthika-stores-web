@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 
 import { OrderStatusLabel } from "@/components/account/order-list";
 import { Media, ratio } from "@/components/ui/media";
-import { getCurrentUser, isAdmin } from "@/lib/auth/session";
+import { getAdminAccess } from "@/lib/auth/access";
 import { getRepository } from "@/lib/data/repository";
 import type { OrderStatus } from "@/lib/types";
 import { cn, formatDate, formatPrice } from "@/lib/utils";
@@ -30,8 +30,7 @@ const STATUSES: OrderStatus[] = [
 async function updateOrder(id: string, formData: FormData) {
   "use server";
 
-  const user = await getCurrentUser();
-  if (!user || !(await isAdmin(user))) return;
+  if (!(await getAdminAccess()).allowed) return;
 
   const repository = await getRepository();
   const status = formData.get("status");
@@ -60,12 +59,14 @@ export default async function AdminOrderPage({ params }: PageProps) {
 
   if (!order) notFound();
 
-  const saveOrder = updateOrder.bind(null, order.id);
+  const orderId = order.id;
 
+  // Captures only the id: a closure over another bound action fails to
+  // serialise under Turbopack.
   async function saveAndReturn(formData: FormData) {
     "use server";
-    await saveOrder(formData);
-    redirect(`/admin/orders/${order!.id}`);
+    await updateOrder(orderId, formData);
+    redirect(`/admin/orders/${orderId}`);
   }
 
   return (
