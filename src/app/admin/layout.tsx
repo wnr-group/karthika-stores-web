@@ -4,6 +4,10 @@ import { redirect } from "next/navigation";
 import { DashboardFrame, DemoBanner } from "@/components/dashboard/ui";
 import { getAdminAccess } from "@/lib/auth/access";
 
+// Always render per request: the access check and the order data must never
+// be frozen into a build-time snapshot.
+export const dynamic = "force-dynamic";
+
 const NAV = [
   { label: "Overview", href: "/admin/overview" },
   { label: "Orders", href: "/admin/orders" },

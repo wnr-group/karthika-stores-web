@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment -- deliberate: see the note below. */
 // @ts-nocheck -- NOT YET PORTED to the marketplace Repository interface
 // (variants, vendor orders, promotions, payouts, moderation...). It is not
 // loaded at runtime: `getRepository()` always returns the seed repository
