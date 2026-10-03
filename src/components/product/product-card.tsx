@@ -100,7 +100,7 @@ export function ProductCard({
           </Link>
         </h3>
 
-        <p className="mt-1 text-[0.75rem] text-taupe">{product.fabric}</p>
+        <p className="mt-1 text-[0.75rem] text-taupe">{product.subtitle}</p>
 
         <Price
           amount={product.price}

@@ -31,11 +31,11 @@ export function AnnouncementBar() {
   }, []);
 
   return (
-    <div className="border-b border-stone-soft bg-shell">
+    <div className="bg-forest">
       <div className="shell flex min-h-9 items-center justify-center py-2">
         <p
           className={cn(
-            "text-center text-[0.625rem] uppercase tracking-[0.18em] text-taupe transition-opacity duration-[280ms] ease-[cubic-bezier(0.22,0.61,0.36,1)]",
+            "text-center text-[0.625rem] uppercase tracking-[0.18em] text-sandal transition-opacity duration-[280ms] ease-[cubic-bezier(0.22,0.61,0.36,1)]",
             visible ? "opacity-100" : "opacity-0",
           )}
         >

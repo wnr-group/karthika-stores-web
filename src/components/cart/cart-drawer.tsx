@@ -104,7 +104,7 @@ export function CartDrawer() {
                   </div>
 
                   <p className="mt-1 text-[0.75rem] text-taupe">
-                    {line.fabric} &middot; {line.color}
+                    {line.subtitle} &middot; {line.color}
                   </p>
 
                   <div className="mt-auto flex items-center justify-between gap-3 pt-4">

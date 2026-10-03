@@ -49,12 +49,12 @@ export default async function ShopCategoryPage({ params, searchParams }: PagePro
       searchParams={resolvedSearchParams}
       basePath={`/shop/${category.slug}`}
       categorySlug={category.slug}
-      eyebrow="Weave"
+      eyebrow="Category"
       title={category.name}
       intro={category.intro ?? category.description}
       breadcrumb={[
         { label: "Home", href: "/" },
-        { label: "Sarees", href: "/shop" },
+        { label: "Shop", href: "/shop" },
         { label: category.name },
       ]}
     />

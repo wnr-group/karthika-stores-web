@@ -43,7 +43,7 @@ export function NewsletterForm() {
 
   if (state === "done") {
     return (
-      <p className="border-b border-stone pb-2.5 text-[0.8125rem] text-success" role="status">
+      <p className="border-b border-paper/20 pb-2.5 text-[0.8125rem] text-sandal" role="status">
         {message}
       </p>
     );
@@ -51,7 +51,7 @@ export function NewsletterForm() {
 
   return (
     <form onSubmit={onSubmit} noValidate>
-      <div className="flex items-center gap-3 border-b border-stone focus-within:border-ink">
+      <div className="flex items-center gap-2 rounded-sm bg-paper p-1 pl-4">
         <label htmlFor="newsletter-email" className="sr-only">
           Email address
         </label>
@@ -64,21 +64,21 @@ export function NewsletterForm() {
             setEmail(event.target.value);
             if (state === "error") setState("idle");
           }}
-          placeholder="your@email.com"
-          className="w-full bg-transparent py-2.5 text-[0.8125rem] outline-none"
+          placeholder="E-mail address"
+          className="w-full bg-transparent py-2 text-[0.8125rem] text-ink outline-none"
         />
         <button
           type="submit"
           disabled={state === "sending"}
           aria-label="Subscribe"
-          className="p-1 text-taupe transition-colors hover:text-ink disabled:opacity-40"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-sm bg-brand text-paper transition-colors hover:bg-brand-deep disabled:opacity-40"
         >
           <ArrowRightIcon className="h-4 w-4" />
         </button>
       </div>
 
       {state === "error" ? (
-        <p className="mt-2 text-[0.6875rem] text-danger" role="alert">
+        <p className="mt-2 text-[0.6875rem] text-[#f0b9a8]" role="alert">
           {message}
         </p>
       ) : null}

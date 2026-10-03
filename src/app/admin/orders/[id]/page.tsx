@@ -24,6 +24,7 @@ const STATUSES: OrderStatus[] = [
   "shipped",
   "delivered",
   "cancelled",
+  "returned",
 ];
 
 async function updateOrder(id: string, formData: FormData) {
@@ -37,11 +38,19 @@ async function updateOrder(id: string, formData: FormData) {
   const trackingNumber = formData.get("trackingNumber");
   const courier = formData.get("courier");
 
-  await repository.updateOrder(id, {
-    status: typeof status === "string" ? (status as OrderStatus) : undefined,
-    trackingNumber: typeof trackingNumber === "string" && trackingNumber ? trackingNumber : null,
-    courier: typeof courier === "string" && courier ? courier : null,
-  });
+  // Tracking belongs to each vendor's shipment; the admin form sets it on
+  // every shipping vendor order of this marketplace order.
+  const order = await repository.getOrderById(id);
+  for (const vendorOrder of order?.vendorOrders ?? []) {
+    if (vendorOrder.fulfillmentType !== "shipping") continue;
+    await repository.updateVendorOrder(vendorOrder.id, {
+      trackingNumber: typeof trackingNumber === "string" && trackingNumber ? trackingNumber : null,
+      courier: typeof courier === "string" && courier ? courier : null,
+    });
+  }
+  if (typeof status === "string" && status) {
+    await repository.updateOrder(id, { status: status as OrderStatus });
+  }
 }
 
 export default async function AdminOrderPage({ params }: PageProps) {
@@ -136,7 +145,7 @@ export default async function AdminOrderPage({ params }: PageProps) {
             <input
               id="courier"
               name="courier"
-              defaultValue={order.courier ?? ""}
+              defaultValue={order.vendorOrders.find((vo) => vo.courier)?.courier ?? ""}
               className="field"
               placeholder="e.g. Delhivery"
             />
@@ -147,7 +156,7 @@ export default async function AdminOrderPage({ params }: PageProps) {
             <input
               id="trackingNumber"
               name="trackingNumber"
-              defaultValue={order.trackingNumber ?? ""}
+              defaultValue={order.vendorOrders.find((vo) => vo.trackingNumber)?.trackingNumber ?? ""}
               className="field"
             />
 

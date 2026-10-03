@@ -1,7 +1,7 @@
-import Image from "next/image";
-
 import type { ProductImage, Tone } from "@/lib/types";
 import { cn, hashString } from "@/lib/utils";
+
+import { RemoteImage } from "./remote-image";
 
 /**
  * The single image component for the whole site.
@@ -61,7 +61,7 @@ export function Media({
   if (image.url) {
     return (
       <div className={cn("relative overflow-hidden bg-shell", className)}>
-        <Image
+        <RemoteImage
           src={image.url}
           alt={image.alt}
           fill

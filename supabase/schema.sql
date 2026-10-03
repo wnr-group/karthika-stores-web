@@ -1,5 +1,5 @@
 -- =============================================================================
--- Karthika - PostgreSQL schema
+-- Karthika marketplace - PostgreSQL schema
 --
 -- Run this once against a fresh Supabase project (SQL Editor, or
 -- `supabase db execute -f supabase/schema.sql`). Then run `policies.sql`,
@@ -10,6 +10,14 @@
 -- `auth.uid()` is never used. Row Level Security therefore denies the anon
 -- key on every customer table; the Next.js server reaches those tables with
 -- the service-role key and does its own authorisation. See policies.sql.
+--
+-- Marketplace note: this schema is generic by design. `products` carries no
+-- category-specific column (no "fabric", no "weave"); those live in
+-- `products.attributes`, shaped per category by `attribute_definitions`. A
+-- `vendor` can list products, services, or both, and every listing resolves
+-- its commission through `commission_rules` at product > vendor > category >
+-- global granularity. See src/lib/types.ts for the TypeScript mirror of all
+-- of this.
 -- =============================================================================
 
 create extension if not exists "pgcrypto";
@@ -40,6 +48,38 @@ exception when duplicate_object then null; end $$;
 
 do $$ begin
   create type payment_method as enum ('razorpay','cod');
+exception when duplicate_object then null; end $$;
+
+do $$ begin
+  create type vendor_status as enum ('pending','approved','suspended','rejected');
+exception when duplicate_object then null; end $$;
+
+do $$ begin
+  create type category_kind as enum ('product','service');
+exception when duplicate_object then null; end $$;
+
+do $$ begin
+  create type attribute_input_type as enum ('text','number','boolean','select','multiselect');
+exception when duplicate_object then null; end $$;
+
+do $$ begin
+  create type fulfillment_type as enum ('shipping','local_delivery','pickup','digital');
+exception when duplicate_object then null; end $$;
+
+do $$ begin
+  create type service_price_unit as enum ('flat','per_hour','per_person','per_unit');
+exception when duplicate_object then null; end $$;
+
+do $$ begin
+  create type booking_status as enum ('pending','confirmed','completed','cancelled');
+exception when duplicate_object then null; end $$;
+
+do $$ begin
+  create type commission_scope as enum ('global','category','vendor','product');
+exception when duplicate_object then null; end $$;
+
+do $$ begin
+  create type review_subject as enum ('product','service','vendor');
 exception when duplicate_object then null; end $$;
 
 -- -----------------------------------------------------------------------------
@@ -80,11 +120,56 @@ create trigger profiles_updated_at before update on profiles
   for each row execute function set_updated_at();
 
 -- -----------------------------------------------------------------------------
+-- vendors
+--
+-- Every product and service belongs to one of these. The original storefront
+-- ("Karthika") is simply the first, largest, pre-approved row.
+-- -----------------------------------------------------------------------------
+
+create table if not exists vendors (
+  id                uuid primary key default gen_random_uuid(),
+  slug              text not null unique,
+  name              text not null,
+  tagline           text not null default '',
+  description       text not null default '',
+  logo_url          text,
+  cover_image_url   text,
+  location_city     text not null default '',
+  location_state    text not null default '',
+  contact_email     text not null,
+  contact_phone     text not null default '',
+  status            vendor_status not null default 'pending',
+  -- Overrides category/global commission for every listing this vendor owns.
+  -- Null defers to the next scope up; see commission_rules.
+  commission_rate   numeric(5,2),
+  rating            numeric(3,2) not null default 0,
+  rating_count      integer not null default 0,
+  is_featured       boolean not null default false,
+  created_at        timestamptz not null default now(),
+  updated_at        timestamptz not null default now()
+);
+
+create index if not exists vendors_status_idx on vendors (status);
+create index if not exists vendors_featured_idx on vendors (is_featured) where status = 'approved';
+
+drop trigger if exists vendors_updated_at on vendors;
+create trigger vendors_updated_at before update on vendors
+  for each row execute function set_updated_at();
+
+-- -----------------------------------------------------------------------------
 -- categories
+--
+-- Product categories and service categories share this one tree (see `kind`)
+-- but a query always filters to one or the other; a customer never finds a
+-- haircut by paging through sarees. `parent_id` is groundwork for a
+-- vertical > category > subcategory hierarchy; the seed data does not nest
+-- yet, so every row today has a null parent.
 -- -----------------------------------------------------------------------------
 
 create table if not exists categories (
   id            text primary key,
+  parent_id     text references categories (id) on delete set null,
+  kind          category_kind not null default 'product',
   name          text not null,
   slug          text not null unique,
   description   text not null default '',
@@ -98,10 +183,42 @@ create table if not exists categories (
 );
 
 create index if not exists categories_display_order_idx on categories (display_order);
+create index if not exists categories_kind_idx on categories (kind);
+create index if not exists categories_parent_idx on categories (parent_id);
 
 drop trigger if exists categories_updated_at on categories;
 create trigger categories_updated_at before update on categories
   for each row execute function set_updated_at();
+
+-- -----------------------------------------------------------------------------
+-- attribute_definitions
+--
+-- What a category's listings carry beyond the fields every product already
+-- has. A vendor's "add product" form and a product page's details panel
+-- render themselves from this rather than from a hardcoded field list.
+-- Values live in products.attributes (jsonb), not in a row-per-value EAV
+-- table: the catalogue is sized in the hundreds to low thousands of listings,
+-- where jsonb's flexibility is worth more than relational purity.
+-- -----------------------------------------------------------------------------
+
+create table if not exists attribute_definitions (
+  id              text primary key,
+  category_id     text not null references categories (id) on delete cascade,
+  key             text not null,
+  label           text not null,
+  input_type      attribute_input_type not null default 'text',
+  -- [{ "value": "necklace", "label": "Necklace" }, ...] for select/multiselect.
+  options         jsonb,
+  unit            text,
+  is_required     boolean not null default false,
+  is_filterable   boolean not null default true,
+  display_order   integer not null default 0,
+  created_at      timestamptz not null default now(),
+  unique (category_id, key)
+);
+
+create index if not exists attribute_definitions_category_idx
+  on attribute_definitions (category_id, display_order);
 
 -- -----------------------------------------------------------------------------
 -- collections
@@ -129,32 +246,37 @@ create trigger collections_updated_at before update on collections
 
 -- -----------------------------------------------------------------------------
 -- products
+--
+-- Generic across every category the marketplace carries. Category-specific
+-- facts (fabric, stone type, spice level, ...) live in `attributes`, not as
+-- dedicated columns; see `attribute_definitions`.
 -- -----------------------------------------------------------------------------
 
 create table if not exists products (
   id                 text primary key,
+  vendor_id          uuid not null references vendors (id) on delete cascade,
   name               text not null,
   slug               text not null unique,
   short_description  text not null default '',
+  -- The one line shown under the name on a card and in the cart/order
+  -- summary: "Pure Kanchipuram Silk", "925 Sterling Silver", "Serves 4".
+  subtitle           text not null default '',
   description        text not null default '',
   story              text not null default '',
 
-  -- Whole rupees. Sarees are never priced in paise and integers keep the
-  -- arithmetic in the order pipeline exact.
+  -- Whole rupees. Nothing in this catalogue is priced in paise, and integers
+  -- keep the arithmetic in the order pipeline exact.
   price              integer not null check (price >= 0),
   compare_at_price   integer check (compare_at_price is null or compare_at_price > price),
 
-  fabric             text not null,
-  color              text not null,
+  color              text not null default '',
   tone               tone not null,
-  weave              text not null default '',
-  craft_tags         text[] not null default '{}',
+  tags               text[] not null default '{}',
   occasions          occasion[] not null default '{}',
-
-  length_metres      numeric(4,2) not null default 6.30,
-  width_metres       numeric(4,2) not null default 1.15,
-  blouse_piece       text not null default '',
-  care               text[] not null default '{}',
+  -- Category-specific fields, keyed by attribute_definitions.key for this
+  -- product's category_id. Not database-enforced against that table.
+  attributes         jsonb not null default '{}',
+  fulfillment_type   fulfillment_type not null default 'shipping',
 
   category_id        text not null references categories (id) on delete restrict,
   collection_id      text references collections (id) on delete set null,
@@ -164,31 +286,37 @@ create table if not exists products (
   is_new             boolean not null default false,
   is_active          boolean not null default true,
 
+  -- Overrides the vendor/category/global commission for this one listing.
+  commission_rate    numeric(5,2),
+
   created_at         timestamptz not null default now(),
   updated_at         timestamptz not null default now()
 );
 
 -- The listing page filters on these columns on every request.
+create index if not exists products_vendor_idx      on products (vendor_id) where is_active;
 create index if not exists products_category_idx    on products (category_id) where is_active;
 create index if not exists products_collection_idx  on products (collection_id) where is_active;
 create index if not exists products_price_idx       on products (price) where is_active;
 create index if not exists products_created_idx     on products (created_at desc) where is_active;
 create index if not exists products_featured_idx    on products (is_featured) where is_active;
 create index if not exists products_new_idx         on products (is_new) where is_active;
-create index if not exists products_fabric_idx      on products (fabric) where is_active;
 create index if not exists products_tone_idx        on products (tone) where is_active;
 create index if not exists products_occasions_idx   on products using gin (occasions);
-create index if not exists products_craft_tags_idx  on products using gin (craft_tags);
+create index if not exists products_tags_idx        on products using gin (tags);
+create index if not exists products_attributes_idx  on products using gin (attributes);
 
--- Free-text search across the fields a customer actually types.
+-- Free-text search across the fields a customer actually types. `attributes`
+-- is folded in as text so "silk" or "kundan" still matches regardless of
+-- which category's attribute carries it.
 create index if not exists products_search_idx on products using gin (
   to_tsvector(
     'english',
     coalesce(name, '') || ' ' ||
-    coalesce(fabric, '') || ' ' ||
+    coalesce(subtitle, '') || ' ' ||
     coalesce(color, '') || ' ' ||
-    coalesce(weave, '') || ' ' ||
-    coalesce(short_description, '')
+    coalesce(short_description, '') || ' ' ||
+    coalesce(attributes::text, '')
   )
 );
 
@@ -214,6 +342,133 @@ create table if not exists product_images (
 );
 
 create index if not exists product_images_product_idx on product_images (product_id, display_order);
+
+-- -----------------------------------------------------------------------------
+-- services
+--
+-- A bookable offering, not a kind of product: no stock, ships nowhere, sold
+-- by reserving a slot. See `bookings`.
+-- -----------------------------------------------------------------------------
+
+create table if not exists services (
+  id                   text primary key,
+  vendor_id            uuid not null references vendors (id) on delete cascade,
+  category_id          text not null references categories (id) on delete restrict,
+  name                 text not null,
+  slug                 text not null unique,
+  description          text not null default '',
+  price                integer not null check (price >= 0),
+  price_unit           service_price_unit not null default 'flat',
+  duration_minutes     integer,
+  location_city        text,
+  service_area         text[] not null default '{}',
+  booking_rules        jsonb not null default '{}',
+  -- [{ "name": "Second outfit change", "price": 2500 }, ...]
+  addons               jsonb not null default '[]',
+  cancellation_policy  text not null default '',
+  is_active            boolean not null default true,
+  created_at           timestamptz not null default now(),
+  updated_at           timestamptz not null default now()
+);
+
+create index if not exists services_vendor_idx on services (vendor_id) where is_active;
+create index if not exists services_category_idx on services (category_id) where is_active;
+
+drop trigger if exists services_updated_at on services;
+create trigger services_updated_at before update on services
+  for each row execute function set_updated_at();
+
+create table if not exists service_images (
+  id            text primary key,
+  service_id    text not null references services (id) on delete cascade,
+  image_url     text,
+  alt_text      text not null default '',
+  image_type    image_kind not null default 'primary',
+  image_tone    tone not null default 'sand',
+  display_order integer not null default 0,
+  created_at    timestamptz not null default now()
+);
+
+create index if not exists service_images_service_idx on service_images (service_id, display_order);
+
+-- -----------------------------------------------------------------------------
+-- bookings
+-- -----------------------------------------------------------------------------
+
+create table if not exists bookings (
+  id                uuid primary key default gen_random_uuid(),
+  service_id        text not null references services (id) on delete restrict,
+  vendor_id         uuid not null references vendors (id) on delete restrict,
+  -- Null for a guest booking, same convention as orders.user_id.
+  user_id           text,
+  customer_name     text not null,
+  customer_email    text not null,
+  customer_phone    text not null,
+  scheduled_at      timestamptz not null,
+  duration_minutes  integer,
+  status            booking_status not null default 'pending',
+  notes             text not null default '',
+  -- Frozen at booking time, like an order line's unit price.
+  price             integer not null check (price >= 0),
+  created_at        timestamptz not null default now(),
+  updated_at        timestamptz not null default now()
+);
+
+create index if not exists bookings_user_idx on bookings (user_id, scheduled_at desc);
+create index if not exists bookings_vendor_idx on bookings (vendor_id, scheduled_at desc);
+create index if not exists bookings_service_idx on bookings (service_id);
+
+drop trigger if exists bookings_updated_at on bookings;
+create trigger bookings_updated_at before update on bookings
+  for each row execute function set_updated_at();
+
+-- -----------------------------------------------------------------------------
+-- commission_rules
+--
+-- The override chain product > vendor > category > global. The repository
+-- resolves the narrowest rule that applies; see
+-- SupabaseRepository.getCommissionRate. `scope_id` is null only for the
+-- single 'global' row.
+-- -----------------------------------------------------------------------------
+
+create table if not exists commission_rules (
+  id          uuid primary key default gen_random_uuid(),
+  scope       commission_scope not null,
+  scope_id    text,
+  -- A percentage, e.g. 10 for 10%.
+  rate        numeric(5,2) not null check (rate >= 0 and rate <= 100),
+  created_at  timestamptz not null default now(),
+  updated_at  timestamptz not null default now(),
+  check ((scope = 'global') = (scope_id is null))
+);
+
+create unique index if not exists commission_rules_scope_idx
+  on commission_rules (scope, coalesce(scope_id, ''));
+
+drop trigger if exists commission_rules_updated_at on commission_rules;
+create trigger commission_rules_updated_at before update on commission_rules
+  for each row execute function set_updated_at();
+
+insert into commission_rules (scope, scope_id, rate)
+values ('global', null, 10)
+on conflict do nothing;
+
+-- -----------------------------------------------------------------------------
+-- reviews
+-- -----------------------------------------------------------------------------
+
+create table if not exists reviews (
+  id            uuid primary key default gen_random_uuid(),
+  subject_type  review_subject not null,
+  subject_id    text not null,
+  user_id       text not null references profiles (firebase_uid) on delete cascade,
+  rating        smallint not null check (rating between 1 and 5),
+  title         text,
+  body          text not null default '',
+  created_at    timestamptz not null default now()
+);
+
+create index if not exists reviews_subject_idx on reviews (subject_type, subject_id, created_at desc);
 
 -- -----------------------------------------------------------------------------
 -- banners (homepage hero, admin-managed)
@@ -287,6 +542,10 @@ create index if not exists wishlists_user_idx on wishlists (user_id, created_at 
 
 -- -----------------------------------------------------------------------------
 -- orders
+--
+-- One order per checkout, even when its lines span several vendors; see
+-- order_items.vendor_id. Splitting an order into independent per-vendor
+-- fulfilment records is future work the column already supports.
 -- -----------------------------------------------------------------------------
 
 create table if not exists orders (
@@ -339,12 +598,15 @@ create table if not exists order_items (
   id          uuid primary key default gen_random_uuid(),
   order_id    uuid not null references orders (id) on delete cascade,
   product_id  text references products (id) on delete set null,
+  -- Which vendor fulfils this line. Denormalised like the rest of the row,
+  -- so it survives the product being reassigned or deleted.
+  vendor_id   uuid references vendors (id) on delete set null,
 
   -- Denormalised on purpose: an order must still read correctly in five
   -- years, after the product has been renamed, repriced or deleted.
   name        text not null,
   slug        text not null,
-  fabric      text not null default '',
+  subtitle    text not null default '',
   color       text not null default '',
   image_url   text,
   image_alt   text not null default '',
@@ -356,6 +618,7 @@ create table if not exists order_items (
 );
 
 create index if not exists order_items_order_idx on order_items (order_id);
+create index if not exists order_items_vendor_idx on order_items (vendor_id);
 
 -- -----------------------------------------------------------------------------
 -- Stock commitment

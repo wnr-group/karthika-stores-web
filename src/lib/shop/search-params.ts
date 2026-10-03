@@ -53,7 +53,9 @@ export interface ParsedShopParams {
   selected: {
     categories: string[];
     collections: string[];
-    fabrics: string[];
+    /** Generic attribute filters, from `a_<key>` parameters. */
+    attributes: Record<string, string[]>;
+    vendors: string[];
     tones: Tone[];
     occasions: Occasion[];
     minPrice?: number;
@@ -82,7 +84,14 @@ export function parseShopParams(
     ? [overrides.collectionSlug]
     : list(params.collection);
 
-  const fabrics = list(params.fabric);
+  // Any `a_<key>` parameter filters on that attribute, whatever the category.
+  // The old saree-only `fabric` parameter still works as `a_fabric`.
+  const attributes: Record<string, string[]> = {};
+  for (const [name, value] of Object.entries(params)) {
+    if (name.startsWith("a_") && /^a_[a-zA-Z0-9]+$/.test(name)) attributes[name.slice(2)] = list(value);
+  }
+  if (params.fabric) attributes.fabric = [...(attributes.fabric ?? []), ...list(params.fabric)];
+  const vendors = list(params.vendor);
   const tones = list(params.colour).filter((value): value is Tone =>
     TONES.includes(value as Tone),
   );
@@ -104,7 +113,8 @@ export function parseShopParams(
     query: {
       categorySlugs: categories.length ? categories : undefined,
       collectionSlugs: collections.length ? collections : undefined,
-      fabrics: fabrics.length ? fabrics : undefined,
+      attributes: Object.keys(attributes).length ? attributes : undefined,
+      vendorSlugs: vendors.length ? vendors : undefined,
       tones: tones.length ? tones : undefined,
       occasions: occasions.length ? occasions : undefined,
       minPrice,
@@ -121,7 +131,8 @@ export function parseShopParams(
     selected: {
       categories,
       collections,
-      fabrics,
+      attributes,
+      vendors,
       tones,
       occasions,
       minPrice,
@@ -139,7 +150,8 @@ export function countActiveFilters(selected: ParsedShopParams["selected"]): numb
   return (
     selected.categories.length +
     selected.collections.length +
-    selected.fabrics.length +
+    Object.values(selected.attributes).reduce((sum, values) => sum + values.length, 0) +
+    selected.vendors.length +
     selected.tones.length +
     selected.occasions.length +
     (selected.minPrice !== undefined || selected.maxPrice !== undefined ? 1 : 0) +

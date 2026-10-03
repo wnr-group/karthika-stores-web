@@ -498,7 +498,7 @@ export function CheckoutFlow() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="font-display text-[1rem] leading-snug text-ink">{line.name}</p>
-                  <p className="mt-0.5 text-[0.6875rem] text-taupe">{line.fabric}</p>
+                  <p className="mt-0.5 text-[0.6875rem] text-taupe">{line.subtitle}</p>
                 </div>
                 <span className="tnum shrink-0 text-[0.8125rem] text-ink">
                   {formatPrice(line.price * line.quantity)}

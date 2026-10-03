@@ -5,7 +5,7 @@ import { AuthForm } from "@/components/auth/auth-form";
 
 export const metadata: Metadata = {
   title: "Create an account",
-  description: "Create a Karthika account to save addresses, track orders and keep a wishlist.",
+  description: "Create a Haat account to save addresses, track orders and keep a wishlist.",
   robots: { index: false, follow: false },
 };
 

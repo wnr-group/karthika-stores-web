@@ -23,6 +23,7 @@ const KIND_LABEL: Record<ProductImage["kind"], string> = {
   border: "Border",
   fabric: "Fabric",
   lifestyle: "Worn",
+  gallery: "View",
 };
 
 export function ProductGallery({ images, name }: { images: ProductImage[]; name: string }) {

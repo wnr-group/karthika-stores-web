@@ -68,7 +68,7 @@ export default async function OrderPage({ params }: PageProps) {
                 <div className="min-w-0 flex-1">
                   <p className="font-display text-[1rem] leading-snug text-ink">{item.name}</p>
                   <p className="mt-0.5 text-[0.75rem] text-taupe">
-                    {item.fabric} &middot; Qty {item.quantity}
+                    {item.subtitle} &middot; Qty {item.quantity}
                   </p>
                 </div>
                 <span className="tnum shrink-0 text-[0.8125rem] text-ink">
@@ -103,10 +103,10 @@ export default async function OrderPage({ params }: PageProps) {
               <OrderStatusLabel status={order.status} />
             </div>
 
-            {order.trackingNumber ? (
+            {order.vendorOrders.find((vo) => vo.trackingNumber)?.trackingNumber ? (
               <p className="mt-4 text-[0.8125rem] text-graphite">
-                {order.courier ? `${order.courier} · ` : ""}
-                <span className="tnum">{order.trackingNumber}</span>
+                {order.vendorOrders.find((vo) => vo.courier)?.courier ? `${order.vendorOrders.find((vo) => vo.courier)?.courier} · ` : ""}
+                <span className="tnum">{order.vendorOrders.find((vo) => vo.trackingNumber)?.trackingNumber}</span>
               </p>
             ) : null}
 
