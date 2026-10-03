@@ -1440,7 +1440,7 @@ const SEEDS: ProductSeed[] = [
     slug: "festive-gift-hamper",
     subtitle: "Sweets, dry fruit, brass diya, candle",
     short: "A wicker hamper with sweets, roasted dry fruit, a brass diya and a soy candle.",
-    description: "Built around makers on Haat: Mysore pak from Chennai Homemade Foods, a brass diya from Crafted Home, honey from FreshBasket.",
+    description: "Built around our makers: Mysore pak from Chennai Homemade Foods, a brass diya from Crafted Home, honey from FreshBasket.",
     highlights: ["Ships across India", "Handwritten card", "Reusable wicker basket"],
     price: 2490,
     compareAt: 2990,

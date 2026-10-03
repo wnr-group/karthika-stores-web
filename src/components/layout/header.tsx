@@ -9,6 +9,7 @@ import { SearchOverlay } from "@/components/layout/search-overlay";
 import { useAuth } from "@/components/providers/auth-provider";
 import { useCart } from "@/components/providers/cart-provider";
 import { useWishlist } from "@/components/providers/wishlist-provider";
+import { Logo } from "@/components/ui/logo";
 import { Media, ratio } from "@/components/ui/media";
 import {
   BagIcon,
@@ -212,16 +213,7 @@ export function Header() {
    ------------------------------------------------------------------------- */
 
 function Wordmark({ compact = false }: { compact?: boolean }) {
-  return (
-    <span
-      className={cn(
-        "font-display leading-none tracking-[-0.01em] text-ink transition-[font-size] duration-[300ms]",
-        compact ? "text-[1.6rem]" : "text-[1.6rem] lg:text-[2.1rem]",
-      )}
-    >
-      haat<span className="text-brand">.</span>
-    </span>
-  );
+  return <Logo compact={compact} />;
 }
 
 function Badge({ count }: { count: number }) {

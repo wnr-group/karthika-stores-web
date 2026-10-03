@@ -71,7 +71,7 @@ const SEEDS: VendorSeed[] = [
     description:
       "Kanchipuram, Banarasi, organza and handloom cotton from six weaving families, with the weaver's name on every tag.",
     story:
-      "Ananya started in 2016 as a single room on Kasturi Ranga Road because the sarees we wanted did not exist at a price we could defend. Everything is bought directly from the people who wove it. We were the first storefront on Haat, and we still pack every order ourselves.",
+      "Ananya started in 2016 as a single room on Kasturi Ranga Road because the sarees we wanted did not exist at a price we could defend. Everything is bought directly from the people who wove it. We were the first storefront here, and we still pack every order ourselves.",
     ownerName: "Ananya Raghavan",
     email: "atelier@ananyasarees.in",
     phone: "+91 44 4212 8860",
@@ -563,7 +563,7 @@ const SEEDS: VendorSeed[] = [
     tagline: "GST, tax and books for small businesses",
     description: "Chartered accountants for sellers, studios and freelancers: GST registration, ITR filing and monthly bookkeeping.",
     story:
-      "LedgerWise looks after the books of 600 small businesses, including a fair number of Haat sellers. Fixed prices, no surprise invoices, and a named accountant for every client.",
+      "LedgerWise looks after the books of 600 small businesses, including a fair number of our sellers. Fixed prices, no surprise invoices, and a named accountant for every client.",
     ownerName: "CA Revathi Subramanian",
     email: "desk@ledgerwise.in",
     phone: "+91 44 4850 3300",

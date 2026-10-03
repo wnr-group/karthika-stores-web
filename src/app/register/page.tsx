@@ -2,10 +2,11 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 
 import { AuthForm } from "@/components/auth/auth-form";
+import { site } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Create an account",
-  description: "Create a Haat account to save addresses, track orders and keep a wishlist.",
+  description: `Create a ${site.name} account to save addresses, track orders and keep a wishlist.`,
   robots: { index: false, follow: false },
 };
 

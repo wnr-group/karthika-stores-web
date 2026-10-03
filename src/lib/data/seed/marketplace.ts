@@ -40,7 +40,7 @@ export const promotions: Promotion[] = [
     vendorId: null,
     type: "coupon",
     title: "Rs 150 off your first order",
-    description: "For new customers, on any order above Rs 999. Funded by Haat, so every seller gets paid in full.",
+    description: "For new customers, on any order above Rs 999. Funded by us, so every seller gets paid in full.",
     code: "WELCOME150",
     discountType: "fixed",
     value: 150,
