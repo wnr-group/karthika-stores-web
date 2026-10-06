@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { useAuth } from "@/components/providers/auth-provider";
 import { useCart } from "@/components/providers/cart-provider";
@@ -47,6 +47,9 @@ export function CheckoutFlow() {
   const [priced, setPriced] = useState<PricedCart | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
+  // `submitting` only disables the button on the next render, so a fast
+  // double-click gets two calls through. The ref is set synchronously.
+  const placingOrder = useRef(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const [contact, setContact] = useState({ email: "", phone: "" });
@@ -133,6 +136,8 @@ export function CheckoutFlow() {
   }
 
   async function placeOrder() {
+    if (placingOrder.current) return;
+
     // Parse both steps here rather than calling the validators, because
     // `errors` would still hold the previous render's value when we decide
     // which step to send the customer back to.
@@ -147,6 +152,7 @@ export function CheckoutFlow() {
       return;
     }
 
+    placingOrder.current = true;
     setSubmitting(true);
     setSubmitError(null);
 
@@ -186,14 +192,17 @@ export function CheckoutFlow() {
             ),
           );
         }
+        placingOrder.current = false;
         setSubmitting(false);
         return;
       }
 
+      // Stays locked: the page is navigating to the confirmation.
       clear();
       router.push(`/order/${data.orderNumber}`);
     } catch {
       setSubmitError("We could not reach the server. Check your connection and try again.");
+      placingOrder.current = false;
       setSubmitting(false);
     }
   }
