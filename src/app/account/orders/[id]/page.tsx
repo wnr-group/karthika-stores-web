@@ -84,6 +84,15 @@ export default async function AccountOrderPage({ params }: PageProps) {
             {order.shippingAddress.city}, {order.shippingAddress.state}{" "}
             {order.shippingAddress.postalCode}
           </address>
+
+          {order.notes ? (
+            <>
+              <h3 className="mt-6 text-[0.6875rem] uppercase tracking-[0.18em] text-ink">
+                Your notes
+              </h3>
+              <p className="mt-3 whitespace-pre-line text-[0.8125rem] text-graphite">{order.notes}</p>
+            </>
+          ) : null}
         </div>
 
         <dl className="space-y-3 text-[0.875rem]">

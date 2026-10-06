@@ -9,7 +9,7 @@ import { commerce } from "@/lib/site";
 
 export type RawSearchParams = Record<string, string | string[] | undefined>;
 
-const SORT_KEYS: SortKey[] = ["featured", "newest", "price-asc", "price-desc"];
+const SORT_KEYS: SortKey[] = ["featured", "popular", "rating", "newest", "price-asc", "price-desc"];
 
 const TONES: Tone[] = [
   "ivory",
@@ -24,7 +24,15 @@ const TONES: Tone[] = [
   "teal",
 ];
 
-const OCCASIONS: Occasion[] = ["everyday", "work", "festive", "ceremony", "wedding"];
+const OCCASIONS: Occasion[] = [
+  "everyday",
+  "work",
+  "festive",
+  "ceremony",
+  "wedding",
+  "gifting",
+  "party",
+];
 
 /** Reads a repeatable parameter, accepting both `?f=a&f=b` and `?f=a,b`. */
 function list(value: string | string[] | undefined): string[] {

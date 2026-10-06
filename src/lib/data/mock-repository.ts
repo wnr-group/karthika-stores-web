@@ -744,6 +744,7 @@ export class MockRepository implements Repository {
       totalAmount: subtotal + shippingAmount - discountAmount,
       commissionAmount: vendorOrders.reduce((sum, vo) => sum + vo.commissionAmount, 0),
       shippingAddress: input.shippingAddress,
+      notes: input.notes,
       items: vendorOrders.flatMap((vo) => vo.items),
       vendorOrders,
       createdAt: timestamp,

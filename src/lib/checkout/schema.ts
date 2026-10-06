@@ -16,6 +16,9 @@ const postalCode = z
   .trim()
   .regex(/^[1-9]\d{5}$/, "Enter a six-digit PIN code");
 
+/** Shared with the checkout textarea, so the box stops where the server does. */
+export const NOTES_MAX_LENGTH = 500;
+
 export const contactSchema = z.object({
   email: z.string().trim().toLowerCase().email("Enter a valid email address"),
   phone,
@@ -36,7 +39,12 @@ export const checkoutSchema = z.object({
   contact: contactSchema,
   address: addressSchema,
   paymentMethod: z.enum(["razorpay", "cod"]),
-  notes: z.string().trim().max(500).optional().or(z.literal("")),
+  notes: z
+    .string()
+    .trim()
+    .max(NOTES_MAX_LENGTH, `Keep notes under ${NOTES_MAX_LENGTH} characters`)
+    .optional()
+    .or(z.literal("")),
   saveAddress: z.boolean().optional(),
   // Ids and quantities only. Prices are never accepted from the browser.
   lines: z

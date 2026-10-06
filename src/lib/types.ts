@@ -975,6 +975,8 @@ export interface Order {
   totalAmount: number;
   commissionAmount: number;
   shippingAddress: ShippingAddress;
+  /** What the customer wrote in "Notes for the atelier" at checkout. */
+  notes?: string | null;
   /** Every line across every vendor, for simple order summaries. */
   items: OrderItem[];
   vendorOrders: VendorOrder[];

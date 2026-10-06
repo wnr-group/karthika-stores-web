@@ -130,6 +130,13 @@ export default async function OrderPage({ params }: PageProps) {
               <span className="tnum">{order.shippingAddress.phone}</span>
             </address>
 
+            {order.notes ? (
+              <>
+                <h3 className="mt-8 text-[0.6875rem] uppercase tracking-[0.2em] text-ink">Your notes</h3>
+                <p className="mt-3 whitespace-pre-line text-[0.8125rem] text-graphite">{order.notes}</p>
+              </>
+            ) : null}
+
             <h3 className="mt-8 text-[0.6875rem] uppercase tracking-[0.2em] text-ink">Payment</h3>
             <p className="mt-3 text-[0.8125rem] text-graphite">
               {order.paymentMethod === "cod" ? "Cash on delivery" : "Paid online"}

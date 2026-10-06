@@ -122,6 +122,15 @@ export default async function AdminOrderPage({ params }: PageProps) {
               <br />
               <span className="tnum">{order.shippingAddress.phone}</span>
             </address>
+
+            {order.notes ? (
+              <>
+                <h3 className="mt-6 text-[0.6875rem] uppercase tracking-[0.18em] text-ink">
+                  Customer notes
+                </h3>
+                <p className="mt-3 whitespace-pre-line text-[0.8125rem] text-graphite">{order.notes}</p>
+              </>
+            ) : null}
           </div>
         </div>
 

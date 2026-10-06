@@ -14,6 +14,7 @@ import {
   contactSchema,
   fieldErrors,
   INDIAN_STATES,
+  NOTES_MAX_LENGTH,
 } from "@/lib/checkout/schema";
 import { commerce } from "@/lib/site";
 import type { PricedCart } from "@/lib/types";
@@ -191,6 +192,8 @@ export function CheckoutFlow() {
               ]),
             ),
           );
+          // The notes field lives on the delivery step; take them to it.
+          if (data.errors.notes) setStep("delivery");
         }
         placingOrder.current = false;
         setSubmitting(false);
@@ -400,11 +403,13 @@ export function CheckoutFlow() {
               label="Notes for the atelier (optional)"
               htmlFor="notes"
               hint="Fall and pico, blouse stitching, a gift note"
+              error={errors.notes}
               className="sm:col-span-2"
             >
               <textarea
                 id="notes"
                 rows={2}
+                maxLength={NOTES_MAX_LENGTH}
                 className="field resize-none"
                 value={notes}
                 onChange={(event) => setNotes(event.target.value)}
