@@ -77,14 +77,16 @@ export function WishlistButton({
       aria-label={saved ? `Remove ${productName} from wishlist` : `Save ${productName}`}
       aria-pressed={saved}
       className={cn(
-        "absolute right-3 top-3 z-10 p-1.5 text-ink/70 transition-colors duration-[240ms] hover:text-ink",
+        // A solid disc behind the heart keeps it readable on any photograph.
+        "absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-paper/90 text-ink shadow-[0_1px_4px_rgba(0,0,0,0.15)] transition-colors duration-[240ms] hover:bg-paper",
         className,
       )}
     >
       <HeartIcon
         filled={saved}
+        strokeWidth={1.6}
         className={cn(
-          "h-[1.15rem] w-[1.15rem] drop-shadow-[0_1px_2px_rgba(255,255,255,0.5)] transition-transform duration-[300ms] ease-[cubic-bezier(0.22,0.61,0.36,1)]",
+          "h-5 w-5 transition-transform duration-[300ms] ease-[cubic-bezier(0.22,0.61,0.36,1)]",
           saved && "text-terracotta",
           pulsing && "scale-125",
         )}
