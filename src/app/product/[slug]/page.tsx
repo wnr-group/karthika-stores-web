@@ -79,7 +79,7 @@ export default async function ProductPage({ params }: PageProps) {
 
           <h1 className="display-md">{product.name}</h1>
           <p className="mt-2 text-[0.9375rem] text-taupe">
-            {product.subtitle} &middot; {product.color}
+            {[product.subtitle, product.color].filter(Boolean).join(" · ")}
           </p>
           <p className="mt-0.5 text-[0.8125rem] text-taupe">
             Sold by{" "}

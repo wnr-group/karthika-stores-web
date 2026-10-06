@@ -37,6 +37,8 @@ export interface BagLine {
   price: number;
   quantity: number;
   maxQuantity: number;
+  /** Sarees get the stitching and weaver's-note copy in the bag; nothing else does. */
+  isSaree?: boolean;
 }
 
 interface CartContextValue {
@@ -132,6 +134,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
           price: product.price,
           quantity: Math.min(ceiling, quantity),
           maxQuantity: ceiling,
+          isSaree: product.categoryTrail.some((category) => category.slug === "sarees"),
         },
       ];
     });

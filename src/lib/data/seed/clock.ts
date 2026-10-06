@@ -12,6 +12,9 @@ today.setUTCHours(0, 0, 0, 0);
 
 export const SEED_NOW = today.getTime();
 
+/** The real moment the seed was built. Nothing seeded may be later than this. */
+export const SEED_BOOT = Date.now();
+
 export function daysAgo(days: number, hour = 10, minute = 0): string {
   const date = new Date(SEED_NOW - days * DAY);
   date.setUTCHours(hour, minute, 0, 0);

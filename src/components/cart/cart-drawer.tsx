@@ -18,6 +18,7 @@ export function CartDrawer() {
 
   const remaining = Math.max(0, commerce.freeShippingThreshold - subtotal);
   const progress = Math.min(100, (subtotal / commerce.freeShippingThreshold) * 100);
+  const hasSaree = lines.some((line) => line.isSaree);
 
   return (
     <Drawer
@@ -104,7 +105,7 @@ export function CartDrawer() {
                   </div>
 
                   <p className="mt-1 text-[0.75rem] text-taupe">
-                    {line.subtitle} &middot; {line.color}
+                    {[line.subtitle, line.color].filter(Boolean).join(" · ")}
                   </p>
 
                   <div className="mt-auto flex items-center justify-between gap-3 pt-4">
@@ -130,9 +131,9 @@ export function CartDrawer() {
 
           <div className="px-5 py-6 md:px-6">
             <ul className="space-y-1.5 text-[0.6875rem] text-taupe">
-              <li>Wrapped in a cotton bag with the weaver&rsquo;s note</li>
+              {hasSaree ? <li>Wrapped in a cotton bag with the weaver&rsquo;s note</li> : null}
               <li>Free returns within 7 days, unworn</li>
-              <li>Fall, pico and blouse stitching on request</li>
+              {hasSaree ? <li>Fall, pico and blouse stitching on request</li> : null}
             </ul>
           </div>
         </>

@@ -119,7 +119,7 @@ export function CartPage() {
                         </Link>
                       </h2>
                       <p className="mt-1.5 text-[0.75rem] text-taupe">
-                        {line.subtitle} &middot; {line.color}
+                        {[line.subtitle, line.color].filter(Boolean).join(" · ")}
                       </p>
                     </div>
 
