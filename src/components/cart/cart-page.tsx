@@ -22,7 +22,7 @@ import { cn, formatPrice } from "@/lib/utils";
  */
 export function CartPage() {
   const { lines, setQuantity, remove, hydrated } = useCart();
-  const { toggle } = useWishlist();
+  const { has, toggle } = useWishlist();
   const [priced, setPriced] = useState<PricedCart | null>(null);
 
   useEffect(() => {
@@ -140,7 +140,9 @@ export function CartPage() {
                     <button
                       type="button"
                       onClick={() => {
-                        toggle({ id: line.productId });
+                        // `toggle` would unsave something already saved, losing
+                        // it from both the bag and the wishlist.
+                        if (!has(line.productId)) toggle({ id: line.productId });
                         remove(line.productId);
                       }}
                       className="text-[0.6875rem] uppercase tracking-[0.14em] text-taupe underline-offset-4 transition-colors hover:text-ink hover:underline"

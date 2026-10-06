@@ -74,7 +74,9 @@ export function AddToBag({
         type="button"
         onClick={() => onAdd()}
         disabled={soldOut}
-        className="flex h-12 flex-1 items-center justify-center bg-ink px-8 text-[0.6875rem] uppercase tracking-[0.16em] text-paper transition-colors duration-[240ms] hover:bg-terracotta-deep disabled:cursor-not-allowed disabled:bg-sand disabled:text-taupe"
+        // flex-1 only once the row is horizontal: in the stacked phone layout
+        // its zero basis collapsed the button's height to a thin strip.
+        className="flex h-12 shrink-0 items-center justify-center bg-ink px-8 sm:flex-1 text-[0.6875rem] uppercase tracking-[0.16em] text-paper transition-colors duration-[240ms] hover:bg-terracotta-deep disabled:cursor-not-allowed disabled:bg-sand disabled:text-taupe"
       >
         {soldOut ? "Sold out" : "Add to bag"}
       </button>
