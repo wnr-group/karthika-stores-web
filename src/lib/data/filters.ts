@@ -61,21 +61,93 @@ function words(term: string): string[] {
   return term.toLowerCase().split(/\s+/).map((word) => word.replace(/[^\p{L}\p{N}]/gu, "")).filter(Boolean);
 }
 
+/**
+ * Folds the spellings Indian words are commonly typed in, applied to both the
+ * search and the text it searches: jhumka / jumka, saree / sari, kurtha /
+ * kurta, pattu / patu. Lowercase input.
+ */
+function fold(text: string): string {
+  return text
+    .replace(/([bdgjkpt])h/g, "$1")
+    .replace(/sh/g, "s")
+    .replace(/ee/g, "i")
+    .replace(/oo/g, "u")
+    .replace(/w/g, "v")
+    .replace(/(\p{L})\1+/gu, "$1");
+}
+
+function contains(text: string, word: string): boolean {
+  return text.includes(word) || (word.endsWith("s") && text.includes(word.slice(0, -1)));
+}
+
 /** Every word has to appear somewhere, so "silk wedding" narrows rather than widens. */
 function matchesAll(haystack: string, term: string): boolean {
-  const text = haystack.toLowerCase();
-  return words(term).every((word) => text.includes(word) || (word.endsWith("s") && text.includes(word.slice(0, -1))));
+  const text = fold(haystack.toLowerCase());
+  return words(term).every((word) => contains(text, fold(word)));
 }
 
 /** A relevance score: name hits beat tag hits beat description hits. */
 function score(fields: Array<[string, number]>, term: string): number {
   let total = 0;
-  for (const word of words(term)) {
+  for (const word of words(term).map(fold)) {
     for (const [field, weight] of fields) {
-      if (field.toLowerCase().includes(word)) total += weight;
+      if (fold(field.toLowerCase()).includes(word)) total += weight;
     }
   }
   return total;
+}
+
+/** Edit distance, counting a swap of neighbouring letters as one edit. */
+function editDistance(a: string, b: string): number {
+  const d = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array<number>(b.length).fill(0)]);
+  for (let j = 1; j <= b.length; j++) d[0]![j] = j;
+  for (let i = 1; i <= a.length; i++) {
+    for (let j = 1; j <= b.length; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      d[i]![j] = Math.min(d[i - 1]![j]! + 1, d[i]![j - 1]! + 1, d[i - 1]![j - 1]! + cost);
+      if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) {
+        d[i]![j] = Math.min(d[i]![j]!, d[i - 2]![j - 2]! + 1);
+      }
+    }
+  }
+  return d[a.length]![b.length]!;
+}
+
+/**
+ * Corrects typos in a search against the text being searched ("kundn" →
+ * "kundan", "neckalce" → "necklace"). A word that already appears somewhere
+ * is left alone, so a correctly spelled search never widens; only a word
+ * that matches nothing is swapped for the closest word in the catalogue, one
+ * letter off (two for long words). Returns the search unchanged when there
+ * is nothing close.
+ */
+export function correctSearch(term: string | undefined, haystacks: string[]): string | undefined {
+  if (!term?.trim()) return term;
+  const text = fold(haystacks.join(" ").toLowerCase());
+  let vocabulary: string[] | null = null;
+  let changed = false;
+
+  const corrected = words(term).map((word) => {
+    const folded = fold(word);
+    if (folded.length < 4 || contains(text, folded)) return word;
+    vocabulary ??= [...new Set(text.split(/[^\p{L}\p{N}]+/u).filter((entry) => entry.length >= 3))];
+    const allowed = folded.length >= 8 ? 2 : 1;
+    let best: string | null = null;
+    let bestDistance = allowed + 1;
+    for (const candidate of vocabulary) {
+      if (Math.abs(candidate.length - folded.length) > allowed) continue;
+      const distance = editDistance(folded, candidate);
+      if (distance < bestDistance) {
+        best = candidate;
+        bestDistance = distance;
+      }
+    }
+    if (!best) return word;
+    changed = true;
+    return best;
+  });
+
+  return changed ? corrected.join(" ") : term;
 }
 
 function attributeText(attributes: Record<string, unknown>): string {

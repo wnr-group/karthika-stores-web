@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { OrderStatusLabel } from "@/components/account/order-list";
 import { SectionTitle, Stat, StatGrid, StatusPill, Th } from "@/components/dashboard/ui";
 import { getRepository } from "@/lib/data/repository";
 import {
@@ -14,7 +15,7 @@ import {
 import { formatDate, formatPrice } from "@/lib/utils";
 
 export const metadata: Metadata = {
-  title: "Admin overview",
+  title: "Overview",
   robots: { index: false, follow: false },
 };
 
@@ -34,6 +35,13 @@ export default async function AdminOverviewPage() {
 
   const topSellers = topBy(vendorOrders, (order) => order.vendorSlug, vendorOrderGmv, 5);
   const recent = [...vendorOrders].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 8);
+  // Show the order's own status, as the order pages and the customer see it.
+  // A seller's "new" part of an order is a "confirmed" order everywhere else.
+  const parentOrders = new Map(
+    (await Promise.all(recent.map((order) => repository.getOrderById(order.orderId))))
+      .filter((order) => order !== null)
+      .map((order) => [order.id, order]),
+  );
 
   return (
     <div className="space-y-10">
@@ -68,7 +76,13 @@ export default async function AdminOverviewPage() {
                     </td>
                     <td className="py-3 pr-4 text-graphite">{order.vendorName}</td>
                     <td className="py-3 pr-4 text-graphite">{formatDate(order.createdAt)}</td>
-                    <td className="py-3 pr-4"><StatusPill status={order.status} /></td>
+                    <td className="py-3 pr-4">
+                      {parentOrders.get(order.orderId) ? (
+                        <OrderStatusLabel status={parentOrders.get(order.orderId)!.status} />
+                      ) : (
+                        <StatusPill status={order.status} />
+                      )}
+                    </td>
                     <td className="tnum py-3 pr-4 text-right text-ink">{formatPrice(order.total)}</td>
                   </tr>
                 ))}

@@ -49,7 +49,10 @@ export async function Listing({
     repository.getFacets(query),
   ]);
 
-  const activeCount = countActiveFilters(selected);
+  // The page's own category or collection is not a filter the shopper set,
+  // and Clear cannot remove it, so it must not count or show as a chip.
+  const activeCount =
+    countActiveFilters(selected) - (categorySlug ? 1 : 0) - (collectionSlug ? 1 : 0);
 
   const filterProps = {
     facets,

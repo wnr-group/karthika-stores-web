@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -7,6 +8,11 @@ import { getAdminAccess } from "@/lib/auth/access";
 // Always render per request: the access check and the order data must never
 // be frozen into a build-time snapshot.
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: { default: "Admin dashboard", template: "%s — Admin dashboard" },
+  robots: { index: false, follow: false },
+};
 
 const NAV = [
   { label: "Overview", href: "/admin/overview" },

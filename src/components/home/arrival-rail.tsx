@@ -92,15 +92,26 @@ export function ArrivalRail({ products }: { products: ProductWithRelations[] }) 
                     {formatPrice(product.price)}
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => addToBag(product)}
-                  disabled={soldOut}
-                  aria-label={soldOut ? `${product.name} is sold out` : `Add ${product.name} to bag`}
-                  className="mt-4 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-paper/25 text-paper/80 transition-colors hover:border-sandal hover:bg-sandal hover:text-ink disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  <BagIcon className="h-4 w-4" />
-                </button>
+                {product.options.length && !soldOut ? (
+                  // A size or colour has to be chosen first, on the product page.
+                  <Link
+                    href={`/product/${product.slug}`}
+                    aria-label={`Choose options for ${product.name}`}
+                    className="mt-4 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-paper/25 text-paper/80 transition-colors hover:border-sandal hover:bg-sandal hover:text-ink"
+                  >
+                    <BagIcon className="h-4 w-4" />
+                  </Link>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => addToBag(product)}
+                    disabled={soldOut}
+                    aria-label={soldOut ? `${product.name} is sold out` : `Add ${product.name} to bag`}
+                    className="mt-4 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-paper/25 text-paper/80 transition-colors hover:border-sandal hover:bg-sandal hover:text-ink disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    <BagIcon className="h-4 w-4" />
+                  </button>
+                )}
               </div>
             </article>
           );

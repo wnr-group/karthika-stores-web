@@ -3,7 +3,7 @@
 import Link from "next/link";
 
 import { QuantityStepper } from "@/components/cart/quantity-stepper";
-import { useCart } from "@/components/providers/cart-provider";
+import { bagLineKey, useCart } from "@/components/providers/cart-provider";
 import { Drawer } from "@/components/ui/drawer";
 import { Media, ratio } from "@/components/ui/media";
 import { commerce } from "@/lib/site";
@@ -18,6 +18,7 @@ export function CartDrawer() {
 
   const remaining = Math.max(0, commerce.freeShippingThreshold - subtotal);
   const progress = Math.min(100, (subtotal / commerce.freeShippingThreshold) * 100);
+  const hasSaree = lines.some((line) => line.isSaree);
 
   return (
     <Drawer
@@ -80,7 +81,7 @@ export function CartDrawer() {
 
           <ul className="divide-y divide-stone-soft">
             {lines.map((line) => (
-              <li key={line.productId} className="flex gap-4 px-5 py-5 md:px-6">
+              <li key={bagLineKey(line)} className="flex gap-4 px-5 py-5 md:px-6">
                 <Link
                   href={`/product/${line.slug}`}
                   onClick={closeBag}
@@ -104,20 +105,23 @@ export function CartDrawer() {
                   </div>
 
                   <p className="mt-1 text-[0.75rem] text-taupe">
-                    {line.subtitle} &middot; {line.color}
+                    {[line.subtitle, line.color].filter(Boolean).join(" · ")}
                   </p>
+                  {line.variantTitle ? (
+                    <p className="mt-0.5 text-[0.75rem] text-ink">{line.variantTitle}</p>
+                  ) : null}
 
                   <div className="mt-auto flex items-center justify-between gap-3 pt-4">
                     <QuantityStepper
                       value={line.quantity}
                       max={line.maxQuantity}
-                      onChange={(next) => setQuantity(line.productId, next)}
+                      onChange={(next) => setQuantity(bagLineKey(line), next)}
                       label={line.name}
                       size="sm"
                     />
                     <button
                       type="button"
-                      onClick={() => remove(line.productId)}
+                      onClick={() => remove(bagLineKey(line))}
                       className="text-[0.6875rem] uppercase tracking-[0.14em] text-taupe underline-offset-4 transition-colors hover:text-ink hover:underline"
                     >
                       Remove
@@ -130,9 +134,9 @@ export function CartDrawer() {
 
           <div className="px-5 py-6 md:px-6">
             <ul className="space-y-1.5 text-[0.6875rem] text-taupe">
-              <li>Wrapped in a cotton bag with the weaver&rsquo;s note</li>
+              {hasSaree ? <li>Wrapped in a cotton bag with the weaver&rsquo;s note</li> : null}
               <li>Free returns within 7 days, unworn</li>
-              <li>Fall, pico and blouse stitching on request</li>
+              {hasSaree ? <li>Fall, pico and blouse stitching on request</li> : null}
             </ul>
           </div>
         </>

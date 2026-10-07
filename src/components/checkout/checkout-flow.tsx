@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { useAuth } from "@/components/providers/auth-provider";
-import { useCart } from "@/components/providers/cart-provider";
+import { bagLineKey, useCart } from "@/components/providers/cart-provider";
 import { Media, ratio } from "@/components/ui/media";
 import { CheckIcon } from "@/components/ui/icons";
 import { EmptyState, Field } from "@/components/ui/primitives";
@@ -14,6 +14,7 @@ import {
   contactSchema,
   fieldErrors,
   INDIAN_STATES,
+  NOTES_MAX_LENGTH,
 } from "@/lib/checkout/schema";
 import { commerce } from "@/lib/site";
 import type { PricedCart } from "@/lib/types";
@@ -47,6 +48,9 @@ export function CheckoutFlow() {
   const [priced, setPriced] = useState<PricedCart | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
+  // `submitting` only disables the button on the next render, so a fast
+  // double-click gets two calls through. The ref is set synchronously.
+  const placingOrder = useRef(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const [contact, setContact] = useState({ email: "", phone: "" });
@@ -81,7 +85,7 @@ export function CheckoutFlow() {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        lines: lines.map((line) => ({ productId: line.productId, quantity: line.quantity })),
+        lines: lines.map((line) => ({ productId: line.productId, variantId: line.variantId, quantity: line.quantity })),
       }),
     })
       .then((response) => (response.ok ? response.json() : null))
@@ -120,6 +124,24 @@ export function CheckoutFlow() {
     );
   }
 
+  // Stop here rather than after three steps of form-filling.
+  if (priced && priced.lines.length === 0) {
+    return (
+      <EmptyState
+        eyebrow="Checkout"
+        title="Nothing in your bag can be ordered"
+        body="The pieces in your bag have been taken out of the shop, sold out, or are not delivered to your city. Remove them from your bag to carry on."
+        action={{ label: "Back to your bag", href: "/cart" }}
+      />
+    );
+  }
+
+  const unavailable = (line: (typeof lines)[number]) =>
+    Boolean(priced) &&
+    !priced!.lines.some(
+      (entry) => entry.productId === line.productId && (!line.variantId || entry.variantId === line.variantId),
+    );
+
   function validateContact(): boolean {
     const result = contactSchema.safeParse(contact);
     setErrors(result.success ? {} : fieldErrors(result.error));
@@ -133,6 +155,8 @@ export function CheckoutFlow() {
   }
 
   async function placeOrder() {
+    if (placingOrder.current) return;
+
     // Parse both steps here rather than calling the validators, because
     // `errors` would still hold the previous render's value when we decide
     // which step to send the customer back to.
@@ -147,6 +171,7 @@ export function CheckoutFlow() {
       return;
     }
 
+    placingOrder.current = true;
     setSubmitting(true);
     setSubmitError(null);
 
@@ -162,6 +187,7 @@ export function CheckoutFlow() {
           saveAddress,
           lines: lines.map((line) => ({
             productId: line.productId,
+            variantId: line.variantId,
             quantity: line.quantity,
           })),
         }),
@@ -185,15 +211,20 @@ export function CheckoutFlow() {
               ]),
             ),
           );
+          // The notes field lives on the delivery step; take them to it.
+          if (data.errors.notes) setStep("delivery");
         }
+        placingOrder.current = false;
         setSubmitting(false);
         return;
       }
 
+      // Stays locked: the page is navigating to the confirmation.
       clear();
       router.push(`/order/${data.orderNumber}`);
     } catch {
       setSubmitError("We could not reach the server. Check your connection and try again.");
+      placingOrder.current = false;
       setSubmitting(false);
     }
   }
@@ -391,11 +422,13 @@ export function CheckoutFlow() {
               label="Notes for the atelier (optional)"
               htmlFor="notes"
               hint="Fall and pico, blouse stitching, a gift note"
+              error={errors.notes}
               className="sm:col-span-2"
             >
               <textarea
                 id="notes"
                 rows={2}
+                maxLength={NOTES_MAX_LENGTH}
                 className="field resize-none"
                 value={notes}
                 onChange={(event) => setNotes(event.target.value)}
@@ -489,7 +522,7 @@ export function CheckoutFlow() {
 
           <ul className="mt-6 space-y-5">
             {lines.map((line) => (
-              <li key={line.productId} className="flex gap-4">
+              <li key={bagLineKey(line)} className={cn("flex gap-4", unavailable(line) && "opacity-60")}>
                 <div className={cn("relative w-16 shrink-0 overflow-hidden", ratio.product)}>
                   <Media image={line.image} className="absolute inset-0" sizes="64px" />
                   <span className="tnum absolute right-0 top-0 bg-ink px-1.5 text-[0.625rem] leading-5 text-paper">
@@ -498,11 +531,19 @@ export function CheckoutFlow() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="font-display text-[1rem] leading-snug text-ink">{line.name}</p>
-                  <p className="mt-0.5 text-[0.6875rem] text-taupe">{line.subtitle}</p>
+                  <p className="mt-0.5 text-[0.6875rem] text-taupe">
+                    {[line.variantTitle, line.subtitle].filter(Boolean).join(" · ")}
+                  </p>
                 </div>
-                <span className="tnum shrink-0 text-[0.8125rem] text-ink">
-                  {formatPrice(line.price * line.quantity)}
-                </span>
+                {unavailable(line) ? (
+                  <span className="shrink-0 text-[0.625rem] uppercase tracking-[0.14em] text-taupe">
+                    Not available
+                  </span>
+                ) : (
+                  <span className="tnum shrink-0 text-[0.8125rem] text-ink">
+                    {formatPrice(line.price * line.quantity)}
+                  </span>
+                )}
               </li>
             ))}
           </ul>

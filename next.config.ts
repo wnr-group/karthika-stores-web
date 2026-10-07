@@ -22,6 +22,9 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ["firebase-admin"],
   experimental: {
     optimizePackageImports: ["motion"],
+    // The seller's product form posts up to 6 images of 5 MB each in one save
+    // (see MAX_NEW_IMAGES_PER_SAVE). The default limit is 1 MB.
+    serverActions: { bodySizeLimit: "32mb" },
   },
 };
 

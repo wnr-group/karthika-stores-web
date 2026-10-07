@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { pinCodeMatchesState } from "@/lib/checkout/pincode";
+
 /**
  * One schema, used by the checkout form in the browser and by the route
  * handler on the server. The client copy exists to give fast feedback; the
@@ -16,33 +18,54 @@ const postalCode = z
   .trim()
   .regex(/^[1-9]\d{5}$/, "Enter a six-digit PIN code");
 
+/** Shared with the checkout textarea, so the box stops where the server does. */
+export const NOTES_MAX_LENGTH = 500;
+
 export const contactSchema = z.object({
   email: z.string().trim().toLowerCase().email("Enter a valid email address"),
   phone,
 });
 
-export const addressSchema = z.object({
-  name: z.string().trim().min(2, "Please give us a name for the parcel").max(80),
-  phone,
-  addressLine1: z.string().trim().min(4, "Enter the house or flat and street").max(120),
-  addressLine2: z.string().trim().max(120).optional().or(z.literal("")),
-  city: z.string().trim().min(2, "Enter a city").max(60),
-  state: z.string().trim().min(2, "Enter a state").max(60),
-  postalCode,
-  country: z.string().trim().default("India"),
-});
+export const addressSchema = z
+  .object({
+    name: z.string().trim().min(2, "Please give us a name for the parcel").max(80),
+    phone,
+    addressLine1: z.string().trim().min(4, "Enter the house or flat and street").max(120),
+    addressLine2: z.string().trim().max(120).optional().or(z.literal("")),
+    city: z.string().trim().min(2, "Enter a city").max(60),
+    state: z.string().trim().min(2, "Enter a state").max(60),
+    postalCode,
+    country: z.string().trim().default("India"),
+  })
+  // A PIN code from another state sends the parcel to the wrong place.
+  .superRefine((address, context) => {
+    if (!pinCodeMatchesState(address.postalCode, address.state)) {
+      context.addIssue({
+        code: "custom",
+        path: ["postalCode"],
+        message: `PIN code ${address.postalCode} is not in ${address.state}. Check the PIN code or the state.`,
+      });
+    }
+  });
 
 export const checkoutSchema = z.object({
   contact: contactSchema,
   address: addressSchema,
   paymentMethod: z.enum(["razorpay", "cod"]),
-  notes: z.string().trim().max(500).optional().or(z.literal("")),
+  notes: z
+    .string()
+    .trim()
+    .max(NOTES_MAX_LENGTH, `Keep notes under ${NOTES_MAX_LENGTH} characters`)
+    .optional()
+    .or(z.literal("")),
   saveAddress: z.boolean().optional(),
   // Ids and quantities only. Prices are never accepted from the browser.
   lines: z
     .array(
       z.object({
         productId: z.string().min(1),
+        // The chosen option. Without it the server picks the first in stock.
+        variantId: z.string().min(1).optional(),
         quantity: z.number().int().positive().max(5),
       }),
     )

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { priceCart } from "@/lib/cart/price";
-import { checkoutSchema, fieldErrors } from "@/lib/checkout/schema";
+import { checkoutSchema, fieldErrors, type AddressInput } from "@/lib/checkout/schema";
 import { getCurrentUser } from "@/lib/auth/session";
 import { getRepository } from "@/lib/data/repository";
 
@@ -24,7 +24,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const { contact, address, paymentMethod, saveAddress, lines } = parsed.data;
+  const { contact, address, paymentMethod, notes, saveAddress, lines } = parsed.data;
 
   const priced = await priceCart(lines);
 
@@ -38,7 +38,8 @@ export async function POST(request: Request) {
   const user = await getCurrentUser();
   const repository = await getRepository();
 
-  if (user && saveAddress) {
+  // Save the address once, not again on every order that reuses it.
+  if (user && saveAddress && !(await hasAddress(user.uid, address))) {
     await repository.createAddress(user.uid, {
       label: "Home",
       name: address.name,
@@ -73,6 +74,7 @@ export async function POST(request: Request) {
     // the confirmation page via /api/razorpay/verify.
     paymentStatus: "pending",
     couponCode: priced.coupon?.code || null,
+    notes: notes || null,
     // One vendor order per group, each with its own delivery and discount.
     groups: priced.groups.map((group) => ({
       vendorId: group.vendorId,
@@ -97,4 +99,17 @@ export async function POST(request: Request) {
   }
 
   return NextResponse.json({ orderNumber: order.orderNumber });
+}
+
+/** Same address already in the book, ignoring case and extra spaces. */
+async function hasAddress(userId: string, address: AddressInput): Promise<boolean> {
+  const normalise = (value: string | null | undefined) =>
+    (value ?? "").trim().replace(/\s+/g, " ").toLowerCase();
+  const fields = ["name", "phone", "addressLine1", "addressLine2", "city", "state", "postalCode"] as const;
+
+  const repository = await getRepository();
+  const saved = await repository.listAddresses(userId);
+  return saved.some((entry) =>
+    fields.every((field) => normalise(entry[field]) === normalise(address[field])),
+  );
 }
