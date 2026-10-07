@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { pinCodeMatchesState } from "@/lib/checkout/pincode";
+
 /**
  * One schema, used by the checkout form in the browser and by the route
  * handler on the server. The client copy exists to give fast feedback; the
@@ -24,16 +26,27 @@ export const contactSchema = z.object({
   phone,
 });
 
-export const addressSchema = z.object({
-  name: z.string().trim().min(2, "Please give us a name for the parcel").max(80),
-  phone,
-  addressLine1: z.string().trim().min(4, "Enter the house or flat and street").max(120),
-  addressLine2: z.string().trim().max(120).optional().or(z.literal("")),
-  city: z.string().trim().min(2, "Enter a city").max(60),
-  state: z.string().trim().min(2, "Enter a state").max(60),
-  postalCode,
-  country: z.string().trim().default("India"),
-});
+export const addressSchema = z
+  .object({
+    name: z.string().trim().min(2, "Please give us a name for the parcel").max(80),
+    phone,
+    addressLine1: z.string().trim().min(4, "Enter the house or flat and street").max(120),
+    addressLine2: z.string().trim().max(120).optional().or(z.literal("")),
+    city: z.string().trim().min(2, "Enter a city").max(60),
+    state: z.string().trim().min(2, "Enter a state").max(60),
+    postalCode,
+    country: z.string().trim().default("India"),
+  })
+  // A PIN code from another state sends the parcel to the wrong place.
+  .superRefine((address, context) => {
+    if (!pinCodeMatchesState(address.postalCode, address.state)) {
+      context.addIssue({
+        code: "custom",
+        path: ["postalCode"],
+        message: `PIN code ${address.postalCode} is not in ${address.state}. Check the PIN code or the state.`,
+      });
+    }
+  });
 
 export const checkoutSchema = z.object({
   contact: contactSchema,
