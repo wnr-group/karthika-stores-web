@@ -5,12 +5,20 @@ import { OrderStatusLabel } from "@/components/account/order-list";
 import { Media, ratio } from "@/components/ui/media";
 import { getAdminAccess } from "@/lib/auth/access";
 import { getRepository } from "@/lib/data/repository";
-import type { OrderStatus } from "@/lib/types";
+import type { OrderStatus, PaymentStatus } from "@/lib/types";
 import { cn, formatDate, formatPrice } from "@/lib/utils";
 
 interface PageProps {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ saved?: string }>;
 }
+
+const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
+  pending: "Not yet paid",
+  paid: "Paid",
+  failed: "Payment failed",
+  refunded: "Refunded",
+};
 
 export const metadata: Metadata = {
   title: "Order",
@@ -52,8 +60,9 @@ async function updateOrder(id: string, formData: FormData) {
   }
 }
 
-export default async function AdminOrderPage({ params }: PageProps) {
+export default async function AdminOrderPage({ params, searchParams }: PageProps) {
   const { id } = await params;
+  const { saved } = await searchParams;
   const repository = await getRepository();
   const order = await repository.getOrderById(id);
 
@@ -66,7 +75,7 @@ export default async function AdminOrderPage({ params }: PageProps) {
   async function saveAndReturn(formData: FormData) {
     "use server";
     await updateOrder(orderId, formData);
-    redirect(`/admin/orders/${orderId}`);
+    redirect(`/admin/orders/${orderId}?saved=1`);
   }
 
   return (
@@ -93,7 +102,10 @@ export default async function AdminOrderPage({ params }: PageProps) {
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="font-display text-[1rem] leading-snug text-ink">{item.name}</p>
-                  <p className="mt-0.5 text-[0.75rem] text-taupe">Qty {item.quantity}</p>
+                  <p className="mt-0.5 text-[0.75rem] text-taupe">
+                    {item.variantTitle && item.variantTitle !== "Default" ? `${item.variantTitle} · ` : ""}
+                    Qty {item.quantity}
+                  </p>
                 </div>
                 <span className="tnum shrink-0 text-[0.8125rem] text-ink">
                   {formatPrice(item.lineTotal)}
@@ -101,6 +113,38 @@ export default async function AdminOrderPage({ params }: PageProps) {
               </li>
             ))}
           </ul>
+
+          <dl className="space-y-2 border-t border-stone pt-5 text-[0.8125rem]">
+            <div className="flex justify-between">
+              <dt className="text-taupe">Subtotal</dt>
+              <dd className="tnum text-ink">{formatPrice(order.subtotal)}</dd>
+            </div>
+            <div className="flex justify-between">
+              <dt className="text-taupe">Shipping</dt>
+              <dd className="tnum text-ink">
+                {order.shippingAmount === 0 ? "Free" : formatPrice(order.shippingAmount)}
+              </dd>
+            </div>
+            {order.discountAmount > 0 ? (
+              <div className="flex justify-between">
+                <dt className="text-taupe">
+                  Discount{order.couponCode ? ` (${order.couponCode})` : ""}
+                </dt>
+                <dd className="tnum text-ink">&minus;{formatPrice(order.discountAmount)}</dd>
+              </div>
+            ) : null}
+            <div className="flex justify-between border-t border-stone-soft pt-2">
+              <dt className="text-ink">Total</dt>
+              <dd className="tnum text-ink">{formatPrice(order.totalAmount)}</dd>
+            </div>
+            <div className="flex justify-between">
+              <dt className="text-taupe">Payment</dt>
+              <dd className="text-ink">
+                {order.paymentMethod === "cod" ? "Cash on delivery" : "Online (Razorpay)"} &middot;{" "}
+                {PAYMENT_STATUS_LABELS[order.paymentStatus]}
+              </dd>
+            </div>
+          </dl>
 
           <div className="mt-6 border-t border-stone pt-5">
             <h3 className="text-[0.6875rem] uppercase tracking-[0.18em] text-ink">
@@ -122,6 +166,15 @@ export default async function AdminOrderPage({ params }: PageProps) {
               <br />
               <span className="tnum">{order.shippingAddress.phone}</span>
             </address>
+
+            {order.notes ? (
+              <>
+                <h3 className="mt-6 text-[0.6875rem] uppercase tracking-[0.18em] text-ink">
+                  Customer notes
+                </h3>
+                <p className="mt-3 whitespace-pre-line text-[0.8125rem] text-graphite">{order.notes}</p>
+              </>
+            ) : null}
           </div>
         </div>
 
@@ -167,6 +220,11 @@ export default async function AdminOrderPage({ params }: PageProps) {
             >
               Save
             </button>
+            {saved ? (
+              <p role="status" className="mt-3 text-[0.75rem] text-success">
+                Saved. The customer&rsquo;s order page shows the new status.
+              </p>
+            ) : null}
           </div>
         </form>
       </div>

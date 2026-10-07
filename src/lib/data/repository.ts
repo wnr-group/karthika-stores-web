@@ -252,6 +252,7 @@ export interface CreateOrderInput {
   paymentMethod: PaymentMethod;
   paymentStatus: PaymentStatus;
   couponCode: string | null;
+  notes: string | null;
   groups: Array<{
     vendorId: string;
     fulfillmentType: FulfillmentType;

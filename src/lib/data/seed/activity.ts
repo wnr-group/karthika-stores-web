@@ -35,7 +35,7 @@ import type {
   VendorOrderStatus,
 } from "@/lib/types";
 
-import { createRandom, daysAgo, SEED_NOW } from "./clock";
+import { createRandom, daysAgo, SEED_BOOT, SEED_NOW } from "./clock";
 import { commissionRules } from "./marketplace";
 import { categories } from "./taxonomy";
 
@@ -222,7 +222,15 @@ export function generateActivity({ vendors, products, services }: ActivityInput)
     for (let n = 0; n < count; n += 1) {
       const customer = random.pick(customers);
       const hour = random.int(8, 22);
-      const createdAt = daysAgo(day, hour, random.int(0, 59));
+      const scheduled = daysAgo(day, hour, random.int(0, 59));
+      // Today's orders can be scheduled for later today, which would date them
+      // after real orders placed now (or tomorrow, in IST). Pull those back
+      // to the minutes before boot, keeping their order and spending no
+      // randomness, so the rest of the seed stays the same.
+      const createdAt =
+        Date.parse(scheduled) > SEED_BOOT
+          ? new Date(SEED_BOOT - (count - n) * 7 * 60_000).toISOString()
+          : scheduled;
       const lineCount = random.weighted([[1, 55], [2, 30], [3, 15]] as const);
 
       const picked = new Map<string, { product: Product; quantity: number; variantIndex: number }>();
@@ -305,7 +313,11 @@ export function generateActivity({ vendors, products, services }: ActivityInput)
 
         const history: StatusEvent[] = [{ status: "new", at: createdAt, note: null }];
         const step = (next: VendorOrderStatus, offsetHours: number, note: string | null = null) =>
-          history.push({ status: next, at: new Date(Date.parse(createdAt) + offsetHours * 3_600_000).toISOString(), note });
+          history.push({
+            status: next,
+            at: new Date(Math.min(Date.parse(createdAt) + offsetHours * 3_600_000, SEED_BOOT)).toISOString(),
+            note,
+          });
         if (status !== "new" && status !== "cancelled") step("processing", 3);
         if (["shipped", "delivered", "returned"].includes(status)) step("shipped", perishable ? 6 : 30);
         if (["delivered", "returned"].includes(status)) step("delivered", perishable ? 8 : 24 * random.int(3, 5));

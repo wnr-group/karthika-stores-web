@@ -35,6 +35,26 @@ const COPY: Record<Mode, { title: string; intro: string; submit: string }> = {
   },
 };
 
+/**
+ * The `?redirect=` target, but only if it stays on this site. Anything else
+ * (`https://evil.example`, `//evil.example`, `/\evil.example`) would turn the
+ * sign-in page into a trusted-looking link to a phishing site.
+ */
+function safeRedirect(value: string | null): string {
+  const fallback = "/account";
+  if (!value || !value.startsWith("/")) return fallback;
+
+  // Let the URL parser decide, since browsers read `/\host` and `/\t/host`
+  // as another host.
+  const origin = "http://same-origin.invalid";
+  try {
+    const url = new URL(value, origin);
+    return url.origin === origin ? `${url.pathname}${url.search}${url.hash}` : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
 export function AuthForm({ mode }: { mode: Mode }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -48,7 +68,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
   const [sent, setSent] = useState(false);
   const [busy, setBusy] = useState(false);
 
-  const redirect = searchParams.get("redirect") ?? "/account";
+  const redirect = safeRedirect(searchParams.get("redirect"));
 
   // Someone who is already signed in has no business on this page.
   useEffect(() => {

@@ -250,8 +250,6 @@ export const footerNav: Array<{ heading: string; links: NavLink[] }> = [
       { label: "Collections", href: "/collections" },
       { label: "Value-added services", href: "/#services" },
       { label: "Our story", href: "/about" },
-      { label: "Admin dashboard", href: "/admin" },
-      { label: "Vendor dashboard", href: "/vendor" },
     ],
   },
   {

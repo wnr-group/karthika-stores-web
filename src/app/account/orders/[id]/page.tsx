@@ -55,7 +55,9 @@ export default async function AccountOrderPage({ params }: PageProps) {
             <div className="min-w-0 flex-1">
               <p className="font-display text-[1rem] leading-snug text-ink">{item.name}</p>
               <p className="mt-0.5 text-[0.75rem] text-taupe">
-                {item.subtitle} &middot; Qty {item.quantity}
+                {[item.variantTitle !== "Default" && item.variantTitle, item.subtitle, `Qty ${item.quantity}`]
+                  .filter(Boolean)
+                  .join(" · ")}
               </p>
             </div>
             <span className="tnum shrink-0 text-[0.8125rem] text-ink">
@@ -84,6 +86,15 @@ export default async function AccountOrderPage({ params }: PageProps) {
             {order.shippingAddress.city}, {order.shippingAddress.state}{" "}
             {order.shippingAddress.postalCode}
           </address>
+
+          {order.notes ? (
+            <>
+              <h3 className="mt-6 text-[0.6875rem] uppercase tracking-[0.18em] text-ink">
+                Your notes
+              </h3>
+              <p className="mt-3 whitespace-pre-line text-[0.8125rem] text-graphite">{order.notes}</p>
+            </>
+          ) : null}
         </div>
 
         <dl className="space-y-3 text-[0.875rem]">

@@ -435,7 +435,12 @@ export function ShopToolbar(props: FiltersProps) {
 
       {/* Active filter chips */}
       {props.activeCount > 0 ? (
-        <ActiveChips selected={props.selected} onClearAll={clearAll} />
+        <ActiveChips
+          selected={props.selected}
+          showCategories={props.showCategories}
+          showCollections={props.showCollections}
+          onClearAll={clearAll}
+        />
       ) : null}
 
       <Drawer
@@ -472,15 +477,20 @@ export function ShopToolbar(props: FiltersProps) {
 
 function ActiveChips({
   selected,
+  showCategories,
+  showCollections,
   onClearAll,
 }: {
   selected: ParsedShopParams["selected"];
+  /** False when the page itself is the category, which is not removable. */
+  showCategories?: boolean;
+  showCollections?: boolean;
   onClearAll: () => void;
 }) {
   const { toggle, setPrice, setSingle } = useFilterNavigation();
 
   const chips: Array<{ label: string; onRemove: () => void }> = [
-    ...selected.categories.map((slug) => ({
+    ...(showCategories ? selected.categories : []).map((slug) => ({
       label: slug.replace(/-/g, " "),
       onRemove: () => toggle("category", slug),
     })),
@@ -498,7 +508,7 @@ function ActiveChips({
       label: occasionLabel(value),
       onRemove: () => toggle("occasion", value),
     })),
-    ...selected.collections.map((slug) => ({
+    ...(showCollections ? selected.collections : []).map((slug) => ({
       label: slug.replace(/-/g, " "),
       onRemove: () => toggle("collection", slug),
     })),

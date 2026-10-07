@@ -11,7 +11,7 @@ import {
 } from "react";
 
 import { commerce } from "@/lib/site";
-import type { ProductImage, ProductWithRelations } from "@/lib/types";
+import type { ProductImage, ProductVariant, ProductWithRelations } from "@/lib/types";
 
 /**
  * The bag.
@@ -19,14 +19,21 @@ import type { ProductImage, ProductWithRelations } from "@/lib/types";
  * Stored in localStorage so it survives a refresh and works for guests. What
  * is stored is a *display snapshot*: enough to draw the drawer instantly
  * without a round trip. The prices in it are never trusted. Checkout sends
- * only product ids and quantities, and the server re-reads every price from
- * the catalogue before it charges anyone. See `lib/cart/price.ts`.
+ * only product ids, variant ids and quantities, and the server re-reads every
+ * price from the catalogue before it charges anyone. See `lib/cart/price.ts`.
+ *
+ * A line is one product in one option (size, colour...): the same saree in
+ * two sizes is two lines. Lines are addressed by `bagLineKey`.
  */
 
 const STORAGE_KEY = "karthika.bag.v1";
 
 export interface BagLine {
   productId: string;
+  /** Absent on lines saved before options were chosen; the server then picks one. */
+  variantId?: string;
+  /** "M / Indigo". Absent for a product without options. */
+  variantTitle?: string;
   vendorId: string;
   slug: string;
   name: string;
@@ -37,6 +44,8 @@ export interface BagLine {
   price: number;
   quantity: number;
   maxQuantity: number;
+  /** Sarees get the stitching and weaver's-note copy in the bag; nothing else does. */
+  isSaree?: boolean;
 }
 
 interface CartContextValue {
@@ -46,15 +55,20 @@ interface CartContextValue {
   subtotal: number;
   isOpen: boolean;
   hydrated: boolean;
-  add: (product: ProductWithRelations, quantity?: number) => void;
-  setQuantity: (productId: string, quantity: number) => void;
-  remove: (productId: string) => void;
+  /** `variant` is the chosen option; ignored for a product without options. */
+  add: (product: ProductWithRelations, quantity?: number, variant?: ProductVariant) => void;
+  setQuantity: (key: string, quantity: number) => void;
+  remove: (key: string) => void;
   clear: () => void;
   openBag: () => void;
   closeBag: () => void;
 }
 
 const CartContext = createContext<CartContextValue | null>(null);
+
+export function bagLineKey(line: { productId: string; variantId?: string }): string {
+  return `${line.productId}|${line.variantId ?? ""}`;
+}
 
 function readStorage(): BagLine[] {
   if (typeof window === "undefined") return [];
@@ -105,14 +119,19 @@ export function CartProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("storage", onStorage);
   }, []);
 
-  const add = useCallback((product: ProductWithRelations, quantity = 1) => {
+  const add = useCallback((product: ProductWithRelations, quantity = 1, variant?: ProductVariant) => {
     setLines((current) => {
-      const ceiling = Math.min(commerce.maxLineQuantity, Math.max(1, product.stockQuantity));
-      const existing = current.find((line) => line.productId === product.id);
+      // Only products with options record one; a plain product has a single
+      // variant the server finds itself, so its lines match bags saved earlier.
+      const chosen = product.options.length ? variant : undefined;
+      const stock = chosen && product.trackInventory ? chosen.stockQuantity : product.stockQuantity;
+      const ceiling = Math.min(commerce.maxLineQuantity, Math.max(1, stock));
+      const key = bagLineKey({ productId: product.id, variantId: chosen?.id });
+      const existing = current.find((line) => bagLineKey(line) === key);
 
       if (existing) {
         return current.map((line) =>
-          line.productId === product.id
+          bagLineKey(line) === key
             ? { ...line, quantity: Math.min(ceiling, line.quantity + quantity) }
             : line,
         );
@@ -123,15 +142,18 @@ export function CartProvider({ children }: { children: ReactNode }) {
         ...current,
         {
           productId: product.id,
+          variantId: chosen?.id,
+          variantTitle: chosen?.title,
           vendorId: product.vendorId,
           slug: product.slug,
           name: product.name,
           subtitle: product.subtitle,
           color: product.color,
           image,
-          price: product.price,
+          price: chosen?.price ?? product.price,
           quantity: Math.min(ceiling, quantity),
           maxQuantity: ceiling,
+          isSaree: product.categoryTrail.some((category) => category.slug === "sarees"),
         },
       ];
     });
@@ -139,20 +161,20 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setIsOpen(true);
   }, []);
 
-  const setQuantity = useCallback((productId: string, quantity: number) => {
+  const setQuantity = useCallback((key: string, quantity: number) => {
     setLines((current) =>
       quantity <= 0
-        ? current.filter((line) => line.productId !== productId)
+        ? current.filter((line) => bagLineKey(line) !== key)
         : current.map((line) =>
-            line.productId === productId
+            bagLineKey(line) === key
               ? { ...line, quantity: Math.min(line.maxQuantity, quantity) }
               : line,
           ),
     );
   }, []);
 
-  const remove = useCallback((productId: string) => {
-    setLines((current) => current.filter((line) => line.productId !== productId));
+  const remove = useCallback((key: string) => {
+    setLines((current) => current.filter((line) => bagLineKey(line) !== key));
   }, []);
 
   const clear = useCallback(() => setLines([]), []);

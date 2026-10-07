@@ -7,9 +7,12 @@ import {
   applySort,
   applyVendorQuery,
   buildFacets,
+  correctSearch,
   findRelated,
   paginate,
+  productHaystack,
   productRelevance,
+  serviceHaystack,
   serviceRelevance,
   sortServices,
   type VendorFacts,
@@ -377,12 +380,16 @@ export class MockRepository implements Repository {
   /* --- Products --- */
 
   async queryProducts(query: ProductQuery): Promise<Paginated<ProductWithRelations>> {
-    const filtered = applyFilters(liveProducts(), query);
-    return paginate(applySort(filtered, query.sort, query.search), query.page, query.perPage);
+    const products = liveProducts();
+    const search = correctSearch(query.search, products.map(productHaystack));
+    const filtered = applyFilters(products, { ...query, search });
+    return paginate(applySort(filtered, query.sort, search), query.page, query.perPage);
   }
 
   async getFacets(query: ProductQuery): Promise<FacetCounts> {
-    return buildFacets(liveProducts(), query, definitionsFor);
+    const products = liveProducts();
+    const search = correctSearch(query.search, products.map(productHaystack));
+    return buildFacets(products, { ...query, search }, definitionsFor);
   }
 
   async getProductBySlug(slug: string): Promise<ProductWithRelations | null> {
@@ -469,8 +476,10 @@ export class MockRepository implements Repository {
   /* --- Services --- */
 
   async queryServices(query: ServiceQuery): Promise<Paginated<ServiceWithRelations>> {
-    const filtered = applyServiceFilters(liveServices(), query);
-    return paginate(sortServices(filtered, query.sort, query.search), query.page, query.perPage ?? commerce.servicesPerPage);
+    const services = liveServices();
+    const search = correctSearch(query.search, services.map(serviceHaystack));
+    const filtered = applyServiceFilters(services, { ...query, search });
+    return paginate(sortServices(filtered, query.sort, search), query.page, query.perPage ?? commerce.servicesPerPage);
   }
 
   async getServiceBySlug(slug: string): Promise<ServiceWithRelations | null> {
@@ -615,19 +624,25 @@ export class MockRepository implements Repository {
     };
     if (query.length < 2) return empty;
 
-    const products = applySort(applyFilters(liveProducts(), { search: query, city: options.city }), "featured", query);
-    const services = sortServices(applyServiceFilters(liveServices(), { search: query, city: options.city }), "featured", query);
-    const vendors = applyVendorQuery(store.vendors, { search: query }, vendorFacts);
-    const lowered = query.toLowerCase();
+    // Typos are corrected against everything searchable; `query` stays as typed.
+    const allProducts = liveProducts();
+    const allServices = liveServices();
+    const match =
+      correctSearch(query, [...allProducts.map(productHaystack), ...allServices.map(serviceHaystack)]) ?? query;
+
+    const products = applySort(applyFilters(allProducts, { search: match, city: options.city }), "featured", match);
+    const services = sortServices(applyServiceFilters(allServices, { search: match, city: options.city }), "featured", match);
+    const vendors = applyVendorQuery(store.vendors, { search: match }, vendorFacts);
+    const lowered = match.toLowerCase();
 
     // Vendors whose listings match rank too: "bridal" should surface the
     // makeup studio even though its name says nothing about brides.
     const vendorScores = new Map<string, number>();
     for (const product of products.slice(0, 40)) {
-      vendorScores.set(product.vendorId, (vendorScores.get(product.vendorId) ?? 0) + productRelevance(product, query));
+      vendorScores.set(product.vendorId, (vendorScores.get(product.vendorId) ?? 0) + productRelevance(product, match));
     }
     for (const service of services.slice(0, 40)) {
-      vendorScores.set(service.vendorId, (vendorScores.get(service.vendorId) ?? 0) + serviceRelevance(service, query));
+      vendorScores.set(service.vendorId, (vendorScores.get(service.vendorId) ?? 0) + serviceRelevance(service, match));
     }
     const vendorIds = new Set(vendors.map((vendor) => vendor.id));
     const relatedVendors = [...vendorScores.entries()]
@@ -744,6 +759,7 @@ export class MockRepository implements Repository {
       totalAmount: subtotal + shippingAmount - discountAmount,
       commissionAmount: vendorOrders.reduce((sum, vo) => sum + vo.commissionAmount, 0),
       shippingAddress: input.shippingAddress,
+      notes: input.notes,
       items: vendorOrders.flatMap((vo) => vo.items),
       vendorOrders,
       createdAt: timestamp,
