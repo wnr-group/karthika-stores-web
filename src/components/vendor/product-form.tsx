@@ -244,9 +244,12 @@ export function VendorProductForm({
     startTransition(() => formAction(formData));
   }
 
+  // Price, original price and stock errors already show under their own box;
+  // below the table goes only what has no box of its own.
+  const inlineField = new RegExp(`^variants\\.\\d+\\.(price|compareAtPrice${tracksInventory ? "|stockQuantity" : ""})$`);
   const variantError =
     errors.variants ??
-    Object.entries(errors).find(([key]) => key.startsWith("variants."))?.[1] ??
+    Object.entries(errors).find(([key]) => key.startsWith("variants.") && !inlineField.test(key))?.[1] ??
     null;
 
   return (
