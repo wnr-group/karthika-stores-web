@@ -42,7 +42,12 @@ export default async function VendorOrdersPage() {
                     <p className="text-[0.75rem] capitalize text-taupe">{order.city}</p>
                   </td>
                   <td className="py-3 pr-4 text-graphite">
-                    {order.items.map((item) => `${item.quantity} × ${item.name}`).join(", ")}
+                    {order.items
+                      .map(
+                        (item) =>
+                          `${item.quantity} × ${item.name}${item.variantTitle && item.variantTitle !== "Default" ? ` (${item.variantTitle})` : ""}`,
+                      )
+                      .join(", ")}
                   </td>
                   <td className="py-3 pr-4"><StatusPill status={order.status} /></td>
                   <td className="tnum py-3 pr-4 text-right text-ink">{formatPrice(order.total)}</td>

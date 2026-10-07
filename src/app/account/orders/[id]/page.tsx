@@ -55,7 +55,9 @@ export default async function AccountOrderPage({ params }: PageProps) {
             <div className="min-w-0 flex-1">
               <p className="font-display text-[1rem] leading-snug text-ink">{item.name}</p>
               <p className="mt-0.5 text-[0.75rem] text-taupe">
-                {item.subtitle} &middot; Qty {item.quantity}
+                {[item.variantTitle !== "Default" && item.variantTitle, item.subtitle, `Qty ${item.quantity}`]
+                  .filter(Boolean)
+                  .join(" · ")}
               </p>
             </div>
             <span className="tnum shrink-0 text-[0.8125rem] text-ink">

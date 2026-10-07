@@ -102,7 +102,10 @@ export default async function AdminOrderPage({ params, searchParams }: PageProps
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="font-display text-[1rem] leading-snug text-ink">{item.name}</p>
-                  <p className="mt-0.5 text-[0.75rem] text-taupe">Qty {item.quantity}</p>
+                  <p className="mt-0.5 text-[0.75rem] text-taupe">
+                    {item.variantTitle && item.variantTitle !== "Default" ? `${item.variantTitle} · ` : ""}
+                    Qty {item.quantity}
+                  </p>
                 </div>
                 <span className="tnum shrink-0 text-[0.8125rem] text-ink">
                   {formatPrice(item.lineTotal)}

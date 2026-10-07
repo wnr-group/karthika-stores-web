@@ -2,12 +2,12 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Fragment } from "react";
 
-import { AddToBag } from "@/components/product/add-to-bag";
 import { ProductGallery } from "@/components/product/gallery";
 import { ProductGrid } from "@/components/product/product-card";
+import { ProductPurchase } from "@/components/product/product-purchase";
 import { WishlistButton } from "@/components/product/wishlist-button";
 import { Accordion, type AccordionItem } from "@/components/ui/accordion";
-import { Breadcrumb, Price, StockNote, Tag } from "@/components/ui/primitives";
+import { Breadcrumb, Tag } from "@/components/ui/primitives";
 import { getRepository } from "@/lib/data/repository";
 import { site } from "@/lib/site";
 import type { AttributeDefinition, ProductWithRelations } from "@/lib/types";
@@ -86,27 +86,13 @@ export default async function ProductPage({ params }: PageProps) {
             <span className="text-ink">{product.vendor.name}</span>
           </p>
 
-          <Price
-            amount={product.price}
-            compareAt={product.compareAtPrice}
-            size="lg"
-            className="mt-5"
-          />
-
-          <p className="mt-6 max-w-md text-[0.9375rem] leading-relaxed text-graphite">
-            {product.shortDescription}
-          </p>
-
-          <StockNote quantity={product.stockQuantity} className="mt-5" />
-
-          <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-            <AddToBag product={product} className="flex-1" />
+          <ProductPurchase product={product}>
             <WishlistButton
               productId={product.id}
               productName={product.name}
               variant="inline"
             />
-          </div>
+          </ProductPurchase>
 
           <Accordion
             className="mt-10"

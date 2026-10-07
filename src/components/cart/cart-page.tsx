@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { QuantityStepper } from "@/components/cart/quantity-stepper";
-import { useCart } from "@/components/providers/cart-provider";
+import { bagLineKey, useCart } from "@/components/providers/cart-provider";
 import { Media, ratio } from "@/components/ui/media";
 import { EmptyState } from "@/components/ui/primitives";
 import { ReturnIcon, ShieldIcon, TruckIcon } from "@/components/ui/icons";
@@ -37,7 +37,7 @@ export function CartPage() {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        lines: lines.map((line) => ({ productId: line.productId, quantity: line.quantity })),
+        lines: lines.map((line) => ({ productId: line.productId, variantId: line.variantId, quantity: line.quantity })),
       }),
     })
       .then((response) => (response.ok ? response.json() : null))
@@ -84,8 +84,8 @@ export function CartPage() {
               A change to your bag
             </p>
             <ul className="mt-2 space-y-1 text-[0.8125rem] text-graphite">
-              {priced.removed.map((entry) => (
-                <li key={entry.productId}>
+              {priced.removed.map((entry, index) => (
+                <li key={`${entry.productId}-${index}`}>
                   {entry.name} &mdash; {entry.reason}.
                 </li>
               ))}
@@ -95,14 +95,17 @@ export function CartPage() {
 
         <ul className="border-t border-stone">
           {lines.map((line) => {
-            const server = priced?.lines.find((entry) => entry.productId === line.productId);
+            const key = bagLineKey(line);
+            const server = priced?.lines.find(
+              (entry) => entry.productId === line.productId && (!line.variantId || entry.variantId === line.variantId),
+            );
             const unitPrice = server?.unitPrice ?? line.price;
             const maxQuantity = server?.available
               ? Math.min(commerce.maxLineQuantity, server.available)
               : line.maxQuantity;
 
             return (
-              <li key={line.productId} className="flex gap-5 border-b border-stone py-7">
+              <li key={key} className="flex gap-5 border-b border-stone py-7">
                 <Link
                   href={`/product/${line.slug}`}
                   className={cn("relative w-24 shrink-0 overflow-hidden sm:w-32", ratio.product)}
@@ -121,6 +124,9 @@ export function CartPage() {
                       <p className="mt-1.5 text-[0.75rem] text-taupe">
                         {[line.subtitle, line.color].filter(Boolean).join(" · ")}
                       </p>
+                      {line.variantTitle ? (
+                        <p className="mt-1 text-[0.75rem] text-ink">{line.variantTitle}</p>
+                      ) : null}
                     </div>
 
                     <span className="tnum shrink-0 text-[0.9375rem] text-ink">
@@ -132,7 +138,7 @@ export function CartPage() {
                     <QuantityStepper
                       value={line.quantity}
                       max={maxQuantity}
-                      onChange={(next) => setQuantity(line.productId, next)}
+                      onChange={(next) => setQuantity(key, next)}
                       label={line.name}
                       size="sm"
                     />
@@ -143,7 +149,7 @@ export function CartPage() {
                         // `toggle` would unsave something already saved, losing
                         // it from both the bag and the wishlist.
                         if (!has(line.productId)) toggle({ id: line.productId });
-                        remove(line.productId);
+                        remove(key);
                       }}
                       className="text-[0.6875rem] uppercase tracking-[0.14em] text-taupe underline-offset-4 transition-colors hover:text-ink hover:underline"
                     >
@@ -152,7 +158,7 @@ export function CartPage() {
 
                     <button
                       type="button"
-                      onClick={() => remove(line.productId)}
+                      onClick={() => remove(key)}
                       className="text-[0.6875rem] uppercase tracking-[0.14em] text-taupe underline-offset-4 transition-colors hover:text-ink hover:underline"
                     >
                       Remove

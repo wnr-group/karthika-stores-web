@@ -51,6 +51,8 @@ export const checkoutSchema = z.object({
     .array(
       z.object({
         productId: z.string().min(1),
+        // The chosen option. Without it the server picks the first in stock.
+        variantId: z.string().min(1).optional(),
         quantity: z.number().int().positive().max(5),
       }),
     )

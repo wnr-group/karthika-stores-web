@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { useAuth } from "@/components/providers/auth-provider";
-import { useCart } from "@/components/providers/cart-provider";
+import { bagLineKey, useCart } from "@/components/providers/cart-provider";
 import { Media, ratio } from "@/components/ui/media";
 import { CheckIcon } from "@/components/ui/icons";
 import { EmptyState, Field } from "@/components/ui/primitives";
@@ -85,7 +85,7 @@ export function CheckoutFlow() {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        lines: lines.map((line) => ({ productId: line.productId, quantity: line.quantity })),
+        lines: lines.map((line) => ({ productId: line.productId, variantId: line.variantId, quantity: line.quantity })),
       }),
     })
       .then((response) => (response.ok ? response.json() : null))
@@ -169,6 +169,7 @@ export function CheckoutFlow() {
           saveAddress,
           lines: lines.map((line) => ({
             productId: line.productId,
+            variantId: line.variantId,
             quantity: line.quantity,
           })),
         }),
@@ -503,7 +504,7 @@ export function CheckoutFlow() {
 
           <ul className="mt-6 space-y-5">
             {lines.map((line) => (
-              <li key={line.productId} className="flex gap-4">
+              <li key={bagLineKey(line)} className="flex gap-4">
                 <div className={cn("relative w-16 shrink-0 overflow-hidden", ratio.product)}>
                   <Media image={line.image} className="absolute inset-0" sizes="64px" />
                   <span className="tnum absolute right-0 top-0 bg-ink px-1.5 text-[0.625rem] leading-5 text-paper">
@@ -512,7 +513,9 @@ export function CheckoutFlow() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="font-display text-[1rem] leading-snug text-ink">{line.name}</p>
-                  <p className="mt-0.5 text-[0.6875rem] text-taupe">{line.subtitle}</p>
+                  <p className="mt-0.5 text-[0.6875rem] text-taupe">
+                    {[line.variantTitle, line.subtitle].filter(Boolean).join(" · ")}
+                  </p>
                 </div>
                 <span className="tnum shrink-0 text-[0.8125rem] text-ink">
                   {formatPrice(line.price * line.quantity)}
