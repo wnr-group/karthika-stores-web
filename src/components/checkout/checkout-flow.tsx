@@ -124,6 +124,24 @@ export function CheckoutFlow() {
     );
   }
 
+  // Stop here rather than after three steps of form-filling.
+  if (priced && priced.lines.length === 0) {
+    return (
+      <EmptyState
+        eyebrow="Checkout"
+        title="Nothing in your bag can be ordered"
+        body="The pieces in your bag have been taken out of the shop, sold out, or are not delivered to your city. Remove them from your bag to carry on."
+        action={{ label: "Back to your bag", href: "/cart" }}
+      />
+    );
+  }
+
+  const unavailable = (line: (typeof lines)[number]) =>
+    Boolean(priced) &&
+    !priced!.lines.some(
+      (entry) => entry.productId === line.productId && (!line.variantId || entry.variantId === line.variantId),
+    );
+
   function validateContact(): boolean {
     const result = contactSchema.safeParse(contact);
     setErrors(result.success ? {} : fieldErrors(result.error));
@@ -504,7 +522,7 @@ export function CheckoutFlow() {
 
           <ul className="mt-6 space-y-5">
             {lines.map((line) => (
-              <li key={bagLineKey(line)} className="flex gap-4">
+              <li key={bagLineKey(line)} className={cn("flex gap-4", unavailable(line) && "opacity-60")}>
                 <div className={cn("relative w-16 shrink-0 overflow-hidden", ratio.product)}>
                   <Media image={line.image} className="absolute inset-0" sizes="64px" />
                   <span className="tnum absolute right-0 top-0 bg-ink px-1.5 text-[0.625rem] leading-5 text-paper">
@@ -517,9 +535,15 @@ export function CheckoutFlow() {
                     {[line.variantTitle, line.subtitle].filter(Boolean).join(" · ")}
                   </p>
                 </div>
-                <span className="tnum shrink-0 text-[0.8125rem] text-ink">
-                  {formatPrice(line.price * line.quantity)}
-                </span>
+                {unavailable(line) ? (
+                  <span className="shrink-0 text-[0.625rem] uppercase tracking-[0.14em] text-taupe">
+                    Not available
+                  </span>
+                ) : (
+                  <span className="tnum shrink-0 text-[0.8125rem] text-ink">
+                    {formatPrice(line.price * line.quantity)}
+                  </span>
+                )}
               </li>
             ))}
           </ul>

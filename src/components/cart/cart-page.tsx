@@ -73,7 +73,17 @@ export function CartPage() {
   const subtotal = priced?.totals.subtotal ?? lines.reduce((t, l) => t + l.price * l.quantity, 0);
   const shipping = priced?.totals.shipping ?? (subtotal >= commerce.freeShippingThreshold ? 0 : commerce.standardShipping);
   const total = priced?.totals.total ?? subtotal + shipping;
-  const remaining = Math.max(0, commerce.freeShippingThreshold - subtotal);
+
+  // Once the server has priced the bag, a line it did not return cannot be
+  // ordered (taken out of the shop, sold out, or not delivered to this city).
+  const serverLine = (line: (typeof lines)[number]) =>
+    priced?.lines.find(
+      (entry) => entry.productId === line.productId && (!line.variantId || entry.variantId === line.variantId),
+    );
+  const isUnavailable = (line: (typeof lines)[number]) => Boolean(priced) && !serverLine(line);
+  const unavailableCount = lines.filter(isUnavailable).length;
+  const nothingToOrder = Boolean(priced) && unavailableCount === lines.length;
+  const remaining = nothingToOrder ? 0 : Math.max(0, commerce.freeShippingThreshold - subtotal);
 
   return (
     <div className="grid gap-12 lg:grid-cols-12 lg:gap-16">
@@ -96,9 +106,8 @@ export function CartPage() {
         <ul className="border-t border-stone">
           {lines.map((line) => {
             const key = bagLineKey(line);
-            const server = priced?.lines.find(
-              (entry) => entry.productId === line.productId && (!line.variantId || entry.variantId === line.variantId),
-            );
+            const server = serverLine(line);
+            const unavailable = isUnavailable(line);
             const unitPrice = server?.unitPrice ?? line.price;
             const maxQuantity = server?.available
               ? Math.min(commerce.maxLineQuantity, server.available)
@@ -106,20 +115,35 @@ export function CartPage() {
 
             return (
               <li key={key} className="flex gap-5 border-b border-stone py-7">
-                <Link
-                  href={`/product/${line.slug}`}
-                  className={cn("relative w-24 shrink-0 overflow-hidden sm:w-32", ratio.product)}
-                >
-                  <Media image={line.image} className="absolute inset-0" sizes="128px" />
-                </Link>
+                {unavailable ? (
+                  <div className={cn("relative w-24 shrink-0 overflow-hidden opacity-60 sm:w-32", ratio.product)}>
+                    <Media image={line.image} className="absolute inset-0" sizes="128px" />
+                  </div>
+                ) : (
+                  <Link
+                    href={`/product/${line.slug}`}
+                    className={cn("relative w-24 shrink-0 overflow-hidden sm:w-32", ratio.product)}
+                  >
+                    <Media image={line.image} className="absolute inset-0" sizes="128px" />
+                  </Link>
+                )}
 
                 <div className="flex min-w-0 flex-1 flex-col">
                   <div className="flex items-start justify-between gap-4">
                     <div>
-                      <h2 className="font-display text-[1.25rem] leading-snug text-ink">
-                        <Link href={`/product/${line.slug}`} className="link-quiet">
-                          {line.name}
-                        </Link>
+                      <h2
+                        className={cn(
+                          "font-display text-[1.25rem] leading-snug",
+                          unavailable ? "text-taupe" : "text-ink",
+                        )}
+                      >
+                        {unavailable ? (
+                          line.name
+                        ) : (
+                          <Link href={`/product/${line.slug}`} className="link-quiet">
+                            {line.name}
+                          </Link>
+                        )}
                       </h2>
                       <p className="mt-1.5 text-[0.75rem] text-taupe">
                         {[line.subtitle, line.color].filter(Boolean).join(" · ")}
@@ -129,19 +153,27 @@ export function CartPage() {
                       ) : null}
                     </div>
 
-                    <span className="tnum shrink-0 text-[0.9375rem] text-ink">
-                      {formatPrice(unitPrice * line.quantity)}
-                    </span>
+                    {unavailable ? (
+                      <span className="shrink-0 text-[0.6875rem] uppercase tracking-[0.14em] text-taupe">
+                        Not available
+                      </span>
+                    ) : (
+                      <span className="tnum shrink-0 text-[0.9375rem] text-ink">
+                        {formatPrice(unitPrice * line.quantity)}
+                      </span>
+                    )}
                   </div>
 
                   <div className="mt-auto flex flex-wrap items-center gap-x-6 gap-y-3 pt-6">
-                    <QuantityStepper
-                      value={line.quantity}
-                      max={maxQuantity}
-                      onChange={(next) => setQuantity(key, next)}
-                      label={line.name}
-                      size="sm"
-                    />
+                    {unavailable ? null : (
+                      <QuantityStepper
+                        value={line.quantity}
+                        max={maxQuantity}
+                        onChange={(next) => setQuantity(key, next)}
+                        label={line.name}
+                        size="sm"
+                      />
+                    )}
 
                     <button
                       type="button"
@@ -191,7 +223,7 @@ export function CartPage() {
             <div className="flex justify-between">
               <dt className="text-taupe">Shipping</dt>
               <dd className="tnum text-ink">
-                {shipping === 0 ? "Complimentary" : formatPrice(shipping)}
+                {nothingToOrder ? "–" : shipping === 0 ? "Complimentary" : formatPrice(shipping)}
               </dd>
             </div>
           </dl>
@@ -212,12 +244,26 @@ export function CartPage() {
 
           <p className="mt-1.5 text-[0.6875rem] text-taupe">Inclusive of all taxes.</p>
 
-          <Link
-            href="/checkout"
-            className="mt-6 flex h-12 w-full items-center justify-center bg-ink text-[0.6875rem] uppercase tracking-[0.16em] text-paper transition-colors duration-[240ms] hover:bg-terracotta-deep"
-          >
-            Proceed to checkout
-          </Link>
+          {nothingToOrder ? (
+            <p className="mt-6 border border-stone bg-shell/60 px-4 py-3 text-[0.8125rem] text-graphite">
+              Nothing in your bag can be ordered right now. Remove the unavailable pieces to carry on
+              shopping.
+            </p>
+          ) : (
+            <>
+              <Link
+                href="/checkout"
+                className="mt-6 flex h-12 w-full items-center justify-center bg-ink text-[0.6875rem] uppercase tracking-[0.16em] text-paper transition-colors duration-[240ms] hover:bg-terracotta-deep"
+              >
+                Proceed to checkout
+              </Link>
+              {unavailableCount > 0 ? (
+                <p className="mt-2 text-[0.6875rem] text-taupe">
+                  Pieces marked &ldquo;Not available&rdquo; are left out of your order.
+                </p>
+              ) : null}
+            </>
+          )}
 
           <ul className="mt-7 space-y-3 border-t border-stone pt-6">
             <Reassurance icon={ShieldIcon} text="Secure checkout. UPI, cards, netbanking or cash on delivery." />
